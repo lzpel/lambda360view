@@ -75,24 +75,18 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
     showViewMenu = false,
 }) => {
     const [cameraTarget, setCameraTarget] = useState<[number, number, number] | null>(null);
+    const [showAxis, setShowAxis] = useState(true);
     // Calculate camera position based on bounding box
     const cameraConfig = useMemo(() => {
         const bb = model.bb;
-        const centerX = (bb.xmin + bb.xmax) / 2;
-        const centerY = (bb.ymin + bb.ymax) / 2;
-        const centerZ = (bb.zmin + bb.zmax) / 2;
-
         const sizeX = bb.xmax - bb.xmin;
         const sizeY = bb.ymax - bb.ymin;
         const sizeZ = bb.zmax - bb.zmin;
         const maxSize = Math.max(sizeX, sizeY, sizeZ);
-
-        // Position camera to see the entire model
         const distance = maxSize * 1.5;
 
         return {
             position: [distance, distance * 0.5, distance] as [number, number, number],
-            target: [centerX, centerY, centerZ] as [number, number, number],
             far: maxSize * 10,
             near: 0.1,
             zoom: 2,
@@ -130,7 +124,9 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
             {showViewMenu && (
                 <ViewMenu
                     onViewChange={handleViewChange}
-                    showAxisButton={false}
+                    showAxisButton={true}
+                    axisEnabled={showAxis}
+                    onToggleAxis={() => setShowAxis(!showAxis)}
                 />
             )}
             <Canvas
@@ -160,7 +156,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
 
                 <CameraController
                     targetPosition={cameraTarget}
-                    lookAt={cameraConfig.target}
+                    lookAt={[0, 0, 0]}
                 />
 
                 <ambientLight intensity={0.6} />
@@ -173,10 +169,13 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
                         edgeColor={edgeColor}
                         showEdges={showEdges}
                     />
+                    {showAxis && (
+                        <axesHelper args={[cameraConfig.distance * 0.5]} />
+                    )}
                 </group>
 
                 <OrbitControls
-                    target={cameraConfig.target}
+                    target={[0, 0, 0]}
                     enableDamping
                     dampingFactor={0.05}
                 />
