@@ -9,7 +9,6 @@
         ],
         "jsx": "react-jsx",
         "declaration": true,
-        "declarationDir": "dist",
         "strict": true,
         "moduleResolution": "bundler",
         "esModuleInterop": true,
