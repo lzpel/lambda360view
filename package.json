@@ -8,9 +8,6 @@
     "files": [
         "dist"
     ],
-    "workspaces": [
-        "examples"
-    ],
     "scripts": {
         "build": "rollup -c",
         "dev": "rollup -c -w",
