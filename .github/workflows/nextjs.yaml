@@ -32,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Custom make generate
-        run: make action
+        run: make NEXT_PUBLIC_REPO=${{ github.event.repository.name }} action
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
