@@ -1,6 +1,6 @@
 generate:
+	npm install
 	npm run build
-
 run:
 	cd examples && npm run dev
 
