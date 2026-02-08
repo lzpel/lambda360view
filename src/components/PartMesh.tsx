@@ -72,9 +72,9 @@ export const PartMesh: React.FC<PartMeshProps> = ({
 
     return (
         <group>
-            {/* Main mesh */}
+            {/* Main mesh - using BasicMaterial for flat CAD-style colors without lighting */}
             <mesh geometry={meshGeometry}>
-                <meshStandardMaterial
+                <meshBasicMaterial
                     color={meshColor}
                     transparent={alpha < 1}
                     opacity={alpha}

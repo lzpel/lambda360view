@@ -2,7 +2,7 @@
 
 A React component library for displaying 3D CAD-like models with edge rendering, built with [react-three-fiber](https://github.com/pmndrs/react-three-fiber).
 
-![Hexapod Demo](examples/screenshot.png)
+![Hexapod Demo](figure/screenshot.png)
 
 ## Features
 

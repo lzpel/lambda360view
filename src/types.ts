@@ -80,5 +80,7 @@ export interface Lambda360ViewProps {
     style?: React.CSSProperties;
     /** Up axis direction: 'Y' (default), 'Z', or '-Y', '-Z' */
     upAxis?: 'Y' | 'Z' | '-Y' | '-Z';
+    /** Use orthographic camera instead of perspective (default: false) */
+    orthographic?: boolean;
 }
 

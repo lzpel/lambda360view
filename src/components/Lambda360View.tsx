@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Lambda360ViewProps, ModelData } from '../types';
 import { ModelRenderer } from './ModelRenderer';
@@ -36,6 +36,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
     className,
     style,
     upAxis = 'Y',
+    orthographic = false,
 }) => {
     // Calculate camera position based on bounding box
     const cameraConfig = useMemo(() => {
@@ -57,6 +58,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
             target: [centerX, centerY, centerZ] as [number, number, number],
             far: maxSize * 10,
             near: 0.1,
+            zoom: 2, // For orthographic camera
         };
     }, [model.bb]);
 
@@ -71,16 +73,37 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
 
     return (
         <div className={className} style={containerStyle}>
+            {/* 
+              Color Management Fix:
+              Problem: Colors appear washed out/dull compared to original CAD colors.
+              Solution: Use MeshBasicMaterial (in PartMesh.tsx) for flat colors without lighting,
+              and disable tone mapping to preserve original hex colors.
+            */}
             <Canvas
-                camera={{
-                    position: cameraConfig.position,
-                    fov: 50,
-                    near: cameraConfig.near,
-                    far: cameraConfig.far,
+                gl={{
+                    antialias: true,
+                    toneMapping: THREE.NoToneMapping,
                 }}
-                gl={{ antialias: true }}
                 style={{ background: backgroundColor }}
             >
+                {orthographic ? (
+                    <OrthographicCamera
+                        makeDefault
+                        position={cameraConfig.position}
+                        zoom={cameraConfig.zoom}
+                        near={cameraConfig.near}
+                        far={cameraConfig.far}
+                    />
+                ) : (
+                    <PerspectiveCamera
+                        makeDefault
+                        position={cameraConfig.position}
+                        fov={50}
+                        near={cameraConfig.near}
+                        far={cameraConfig.far}
+                    />
+                )}
+
                 <ambientLight intensity={0.6} />
                 <directionalLight position={[10, 10, 5]} intensity={0.8} />
                 <directionalLight position={[-10, -10, -5]} intensity={0.3} />
