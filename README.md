@@ -23,10 +23,10 @@ npm install lambda360view
 
 ### Peer Dependencies
 
-Make sure you have these peer dependencies installed:
+This library requires React 18+ as a peer dependency:
 
 ```bash
-npm install react react-dom three @react-three/fiber @react-three/drei
+npm install react react-dom
 ```
 
 ## Usage

@@ -3,7 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
 import dts from 'rollup-plugin-dts';
 
-const external = ['react', 'react-dom', 'three', '@react-three/fiber', '@react-three/drei'];
+const external = ['react', 'react-dom', 'react/jsx-runtime'];
 
 export default [
     // Main build (CJS + ESM)
