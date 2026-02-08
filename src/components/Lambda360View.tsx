@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import React, { useMemo, useState, useRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Lambda360ViewProps } from '../types';
@@ -25,35 +25,17 @@ function getUpAxisRotation(upAxis: 'Y' | 'Z' | '-Y' | '-Z'): THREE.Euler {
 }
 
 /**
- * Camera controller component that handles smooth camera position transitions
+ * Component that provides camera setter function via ref
  */
-const CameraController: React.FC<{
-    targetPosition: [number, number, number] | null;
-    lookAt: [number, number, number];
-}> = ({ targetPosition, lookAt }) => {
+const CameraSetter: React.FC<{
+    setCameraRef: React.MutableRefObject<((pos: [number, number, number]) => void) | null>;
+}> = ({ setCameraRef }) => {
     const { camera } = useThree();
-    const targetRef = useRef<THREE.Vector3 | null>(null);
-    const isAnimating = useRef(false);
 
-    useEffect(() => {
-        if (targetPosition) {
-            targetRef.current = new THREE.Vector3(...targetPosition);
-            isAnimating.current = true;
-        }
-    }, [targetPosition]);
-
-    useFrame(() => {
-        if (isAnimating.current && targetRef.current) {
-            const currentPos = camera.position;
-            const target = targetRef.current;
-            currentPos.lerp(target, 0.1);
-            if (currentPos.distanceTo(target) < 0.1) {
-                currentPos.copy(target);
-                isAnimating.current = false;
-            }
-            camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
-        }
-    });
+    setCameraRef.current = (pos: [number, number, number]) => {
+        camera.position.set(pos[0], pos[1], pos[2]);
+        camera.lookAt(0, 0, 0);
+    };
 
     return null;
 };
@@ -74,8 +56,9 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
     orthographic = false,
     showViewMenu = false,
 }) => {
-    const [cameraTarget, setCameraTarget] = useState<[number, number, number] | null>(null);
+    const setCameraRef = useRef<((pos: [number, number, number]) => void) | null>(null);
     const [showAxis, setShowAxis] = useState(true);
+
     // Calculate camera position based on bounding box
     const cameraConfig = useMemo(() => {
         const bb = model.bb;
@@ -106,7 +89,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
             left: [-distance, 0, 0],
             right: [distance, 0, 0],
         };
-        setCameraTarget(positions[view]);
+        setCameraRef.current?.(positions[view]);
     };
 
     // Get rotation for up axis conversion
@@ -154,10 +137,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
                     />
                 )}
 
-                <CameraController
-                    targetPosition={cameraTarget}
-                    lookAt={[0, 0, 0]}
-                />
+                <CameraSetter setCameraRef={setCameraRef} />
 
                 <ambientLight intensity={0.6} />
                 <directionalLight position={[10, 10, 5]} intensity={0.8} />
