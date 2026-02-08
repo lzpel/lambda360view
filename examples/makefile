@@ -1,2 +1,2 @@
 run:
-	next
+	npx next dev
