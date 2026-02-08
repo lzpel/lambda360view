@@ -6,6 +6,24 @@ import type { Lambda360ViewProps, ModelData } from '../types';
 import { ModelRenderer } from './ModelRenderer';
 
 /**
+ * Get rotation to convert from model's up axis to Three.js Y-up
+ */
+function getUpAxisRotation(upAxis: 'Y' | 'Z' | '-Y' | '-Z'): THREE.Euler {
+    switch (upAxis) {
+        case 'Y':
+            return new THREE.Euler(0, 0, 0);
+        case '-Y':
+            return new THREE.Euler(Math.PI, 0, 0);
+        case 'Z':
+            return new THREE.Euler(-Math.PI / 2, 0, 0);
+        case '-Z':
+            return new THREE.Euler(Math.PI / 2, 0, 0);
+        default:
+            return new THREE.Euler(0, 0, 0);
+    }
+}
+
+/**
  * Lambda360View - A 3D viewer component for CAD-like models with edge display
  */
 export const Lambda360View: React.FC<Lambda360ViewProps> = ({
@@ -17,6 +35,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
     height = '100%',
     className,
     style,
+    upAxis = 'Y',
 }) => {
     // Calculate camera position based on bounding box
     const cameraConfig = useMemo(() => {
@@ -41,6 +60,9 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
         };
     }, [model.bb]);
 
+    // Get rotation for up axis conversion
+    const upAxisRotation = useMemo(() => getUpAxisRotation(upAxis), [upAxis]);
+
     const containerStyle: React.CSSProperties = {
         width,
         height,
@@ -63,11 +85,13 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
                 <directionalLight position={[10, 10, 5]} intensity={0.8} />
                 <directionalLight position={[-10, -10, -5]} intensity={0.3} />
 
-                <ModelRenderer
-                    model={model}
-                    edgeColor={edgeColor}
-                    showEdges={showEdges}
-                />
+                <group rotation={upAxisRotation}>
+                    <ModelRenderer
+                        model={model}
+                        edgeColor={edgeColor}
+                        showEdges={showEdges}
+                    />
+                </group>
 
                 <OrbitControls
                     target={cameraConfig.target}

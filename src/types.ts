@@ -78,4 +78,7 @@ export interface Lambda360ViewProps {
     className?: string;
     /** Additional style for container */
     style?: React.CSSProperties;
+    /** Up axis direction: 'Y' (default), 'Z', or '-Y', '-Z' */
+    upAxis?: 'Y' | 'Z' | '-Y' | '-Z';
 }
+

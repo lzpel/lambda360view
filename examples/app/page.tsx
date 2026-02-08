@@ -76,6 +76,7 @@ export default function Home() {
                 backgroundColor="#f0f0f0"
                 edgeColor="#000000"
                 showEdges={true}
+                upAxis="Z"
                 width="100%"
                 height="100%"
             />
