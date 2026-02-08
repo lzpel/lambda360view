@@ -15,7 +15,7 @@ export default function Home() {
                 // hexapod.js exports a global variable 'hexapod'
                 // We need to load it as a script and access the global
                 const script = document.createElement('script');
-                script.src = '/hexapod.js';
+                script.src = `${process.env.NEXT_PUBLIC_PREFIX}/hexapod.js`;
                 script.onload = () => {
                     // @ts-ignore - hexapod is defined in the loaded script
                     if (typeof window.hexapod !== 'undefined') {
