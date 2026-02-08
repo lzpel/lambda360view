@@ -82,5 +82,7 @@ export interface Lambda360ViewProps {
     upAxis?: 'Y' | 'Z' | '-Y' | '-Z';
     /** Use orthographic camera instead of perspective (default: false) */
     orthographic?: boolean;
+    /** Show view control menu bar (default: false) */
+    showViewMenu?: boolean;
 }
 

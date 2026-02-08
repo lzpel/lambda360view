@@ -78,6 +78,7 @@ export default function Home() {
                 showEdges={true}
                 orthographic={true}
                 upAxis="Z"
+                showViewMenu={true}
                 width="100%"
                 height="100%"
             />
