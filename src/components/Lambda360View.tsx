@@ -72,12 +72,6 @@ export function Lambda360View({
 }: Lambda360ViewProps) {
 	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
-	const [mounted, setMounted] = useState(false);
-
-	// Mount check for SSR compatibility
-	useEffect(() => {
-		setMounted(true);
-	}, []);
 
 	// Calculate camera position based on bounding box
 	const cameraConfig = useMemo(() => {
@@ -121,58 +115,6 @@ export function Lambda360View({
 		position: 'relative',
 		...style,
 	};
-
-	const renderCanvas = () => (
-		<Canvas
-			gl={{
-				antialias: true,
-				toneMapping: THREE.NoToneMapping,
-			}}
-			style={{ background: backgroundColor }}
-		>
-			{orthographic ? (
-				<OrthographicCamera
-					makeDefault
-					position={cameraConfig.position}
-					zoom={cameraConfig.zoom}
-					near={cameraConfig.near}
-					far={cameraConfig.far}
-				/>
-			) : (
-				<PerspectiveCamera
-					makeDefault
-					position={cameraConfig.position}
-					fov={50}
-					near={cameraConfig.near}
-					far={cameraConfig.far}
-				/>
-			)}
-
-			<CameraSetter ref={cameraSetterRef} />
-
-			<ambientLight intensity={0.6} />
-			<directionalLight position={[10, 10, 5]} intensity={0.8} />
-			<directionalLight position={[-10, -10, -5]} intensity={0.3} />
-
-			<group rotation={upAxisRotation}>
-				<ModelRenderer
-					model={model}
-					edgeColor={edgeColor}
-					showEdges={showEdges}
-				/>
-				{showAxis && (
-					<axesHelper args={[cameraConfig.distance * 0.5]} />
-				)}
-			</group>
-
-			<OrbitControls
-				target={[0, 0, 0]}
-				enableDamping
-				dampingFactor={0.05}
-			/>
-		</Canvas>
-	);
-
 	return (
 		<div className={className} style={containerStyle}>
 			{showViewMenu && (
@@ -183,7 +125,54 @@ export function Lambda360View({
 					onToggleAxis={() => setShowAxis(!showAxis)}
 				/>
 			)}
-			{mounted ? renderCanvas() : null}
+			<Canvas
+				gl={{
+					antialias: true,
+					toneMapping: THREE.NoToneMapping,
+				}}
+				style={{ background: backgroundColor }}
+			>
+				{orthographic ? (
+					<OrthographicCamera
+						makeDefault
+						position={cameraConfig.position}
+						zoom={cameraConfig.zoom}
+						near={cameraConfig.near}
+						far={cameraConfig.far}
+					/>
+				) : (
+					<PerspectiveCamera
+						makeDefault
+						position={cameraConfig.position}
+						fov={50}
+						near={cameraConfig.near}
+						far={cameraConfig.far}
+					/>
+				)}
+
+				<CameraSetter ref={cameraSetterRef} />
+
+				<ambientLight intensity={0.6} />
+				<directionalLight position={[10, 10, 5]} intensity={0.8} />
+				<directionalLight position={[-10, -10, -5]} intensity={0.3} />
+
+				<group rotation={upAxisRotation}>
+					<ModelRenderer
+						model={model}
+						edgeColor={edgeColor}
+						showEdges={showEdges}
+					/>
+					{showAxis && (
+						<axesHelper args={[cameraConfig.distance * 0.5]} />
+					)}
+				</group>
+
+				<OrbitControls
+					target={[0, 0, 0]}
+					enableDamping
+					dampingFactor={0.05}
+				/>
+			</Canvas>
 		</div>
 	);
 };

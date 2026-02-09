@@ -1,6 +1,6 @@
 generate:
 	cp -r ../figure/. ./public/
 	npm install
-	npm run build
+	npm run build -- --turbopack
 run:
-	npx next dev
+	npm run dev -- --turbopack
