@@ -27,23 +27,37 @@ function getUpAxisRotation(upAxis: 'Y' | 'Z' | '-Y' | '-Z'): THREE.Euler {
 /**
  * Component that provides camera setter function via ref
  */
-const CameraSetter: React.FC<{
-	setCameraRef: React.MutableRefObject<((pos: [number, number, number]) => void) | null>;
-}> = ({ setCameraRef }) => {
+/**
+ * Handle for camera control
+ */
+interface CameraHandle {
+	setPosition: (pos: [number, number, number]) => void;
+}
+
+/**
+ * Component that provides camera setter function via ref
+ */
+const CameraSetter = React.forwardRef<CameraHandle, {}>((_props, ref) => {
 	const { camera } = useThree();
 
-	setCameraRef.current = (pos: [number, number, number]) => {
-		camera.position.set(pos[0], pos[1], pos[2]);
-		camera.lookAt(0, 0, 0);
-	};
+	React.useImperativeHandle(
+		ref,
+		() => ({
+			setPosition: (pos: [number, number, number]) => {
+				camera.position.set(pos[0], pos[1], pos[2]);
+				camera.lookAt(0, 0, 0);
+			},
+		}),
+		[camera]
+	);
 
 	return null;
-};
+});
 
 /**
  * Lambda360View - A 3D viewer component for CAD-like models with edge display
  */
-export const Lambda360View: React.FC<Lambda360ViewProps> = ({
+export function Lambda360View({
 	model,
 	backgroundColor = '#1a1a2e',
 	edgeColor = '#000000',
@@ -55,8 +69,8 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
 	upAxis = 'Y',
 	orthographic = false,
 	showViewMenu = false,
-}) => {
-	const setCameraRef = useRef<((pos: [number, number, number]) => void) | null>(null);
+}: Lambda360ViewProps) {
+	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
 	const [mounted, setMounted] = useState(false);
 
@@ -95,7 +109,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
 			left: [-distance, 0, 0],
 			right: [distance, 0, 0],
 		};
-		setCameraRef.current?.(positions[view]);
+		cameraSetterRef.current?.setPosition(positions[view]);
 	};
 
 	// Get rotation for up axis conversion
@@ -134,7 +148,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
 				/>
 			)}
 
-			<CameraSetter setCameraRef={setCameraRef} />
+			<CameraSetter ref={cameraSetterRef} />
 
 			<ambientLight intensity={0.6} />
 			<directionalLight position={[10, 10, 5]} intensity={0.8} />

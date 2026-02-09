@@ -1,8 +1,9 @@
 generate:
 	npm install
 	npm run build
+	$(MAKE) -C examples generate
 run:
-	cd examples && npm run dev
+	$(MAKE) -C examples run
 deploy: generate
 	npm publish --verbose
 action: generate # github action
