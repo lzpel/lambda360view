@@ -59,7 +59,19 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
     const setCameraRef = useRef<((pos: [number, number, number]) => void) | null>(null);
     const [showAxis, setShowAxis] = useState(true);
 
-    // Calculate camera position based on bounding box
+    // Initial camera position - only calculated on first mount to prevent
+    // camera jumps when model data updates during real-time parameter changes
+    const [initialCameraPosition] = useState<[number, number, number]>(() => {
+        const bb = model.bb;
+        const sizeX = bb.xmax - bb.xmin;
+        const sizeY = bb.ymax - bb.ymin;
+        const sizeZ = bb.zmax - bb.zmin;
+        const maxSize = Math.max(sizeX, sizeY, sizeZ);
+        const distance = maxSize * 1.5;
+        return [distance, distance * 0.5, distance];
+    });
+
+    // Camera config that updates with model changes (for near/far clipping and view distance)
     const cameraConfig = useMemo(() => {
         const bb = model.bb;
         const sizeX = bb.xmax - bb.xmin;
@@ -69,7 +81,6 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
         const distance = maxSize * 1.5;
 
         return {
-            position: [distance, distance * 0.5, distance] as [number, number, number],
             far: maxSize * 10,
             near: 0.1,
             zoom: 2,
@@ -113,6 +124,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
                 />
             )}
             <Canvas
+                frameloop="always"
                 gl={{
                     antialias: true,
                     toneMapping: THREE.NoToneMapping,
@@ -122,7 +134,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
                 {orthographic ? (
                     <OrthographicCamera
                         makeDefault
-                        position={cameraConfig.position}
+                        position={initialCameraPosition}
                         zoom={cameraConfig.zoom}
                         near={cameraConfig.near}
                         far={cameraConfig.far}
@@ -130,7 +142,7 @@ export const Lambda360View: React.FC<Lambda360ViewProps> = ({
                 ) : (
                     <PerspectiveCamera
                         makeDefault
-                        position={cameraConfig.position}
+                        position={initialCameraPosition}
                         fov={50}
                         near={cameraConfig.near}
                         far={cameraConfig.far}

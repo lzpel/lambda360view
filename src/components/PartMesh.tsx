@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import type { ShapeData } from '../types';
 
@@ -24,13 +24,11 @@ export const PartMesh: React.FC<PartMeshProps> = ({
     const meshGeometry = useMemo(() => {
         const geometry = new THREE.BufferGeometry();
 
-        // Vertices are stored as flat array [x1, y1, z1, x2, y2, z2, ...]
         geometry.setAttribute(
             'position',
             new THREE.BufferAttribute(shape.vertices, 3)
         );
 
-        // Normals
         if (shape.normals && shape.normals.length > 0) {
             geometry.setAttribute(
                 'normal',
@@ -38,12 +36,10 @@ export const PartMesh: React.FC<PartMeshProps> = ({
             );
         }
 
-        // Triangle indices
         if (shape.triangles && shape.triangles.length > 0) {
             geometry.setIndex(new THREE.BufferAttribute(shape.triangles, 1));
         }
 
-        // Compute normals if not provided
         if (!shape.normals || shape.normals.length === 0) {
             geometry.computeVertexNormals();
         }
@@ -66,13 +62,20 @@ export const PartMesh: React.FC<PartMeshProps> = ({
         return geometry;
     }, [shape.edges]);
 
-    // Parse color
+    // Dispose old geometries when they change or on unmount
+    useEffect(() => {
+        return () => { meshGeometry.dispose(); };
+    }, [meshGeometry]);
+
+    useEffect(() => {
+        return () => { edgeGeometry?.dispose(); };
+    }, [edgeGeometry]);
+
     const meshColor = useMemo(() => new THREE.Color(color), [color]);
     const lineColor = useMemo(() => new THREE.Color(edgeColor), [edgeColor]);
 
     return (
         <group>
-            {/* Main mesh - using BasicMaterial for flat CAD-style colors without lighting */}
             <mesh geometry={meshGeometry}>
                 <meshBasicMaterial
                     color={meshColor}
@@ -85,7 +88,6 @@ export const PartMesh: React.FC<PartMeshProps> = ({
                 />
             </mesh>
 
-            {/* Edges */}
             {showEdges && edgeGeometry && (
                 <lineSegments geometry={edgeGeometry}>
                     <lineBasicMaterial
