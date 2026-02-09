@@ -1,5 +1,3 @@
-'use client'
-
 export { Lambda360View } from './components/Lambda360View';
 export { ViewMenu } from './components/ViewMenu';
 export type { ViewType } from './components/ViewMenu';
