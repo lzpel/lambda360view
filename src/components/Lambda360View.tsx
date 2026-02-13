@@ -1,9 +1,12 @@
+'use client';
+
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Lambda360ViewProps } from '../types';
 import { ModelRenderer } from './ModelRenderer';
+import { Annotations } from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
 
 /**
@@ -70,6 +73,7 @@ export function Lambda360View({
 	orthographic = false,
 	showViewMenu = false,
 	footer,
+	annotations,
 }: Lambda360ViewProps) {
 	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
@@ -163,6 +167,7 @@ export function Lambda360View({
 						edgeColor={edgeColor}
 						showEdges={showEdges}
 					/>
+					{annotations && <Annotations annotations={annotations} />}
 					{showAxis && (
 						<axesHelper args={[cameraConfig.distance * 0.5]} />
 					)}

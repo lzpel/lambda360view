@@ -8,4 +8,7 @@ export type {
     BoundingBox,
     Location,
     Lambda360ViewProps,
+    Annotation,
+    PointAnnotation,
+    DistanceAnnotation,
 } from './types';

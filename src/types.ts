@@ -60,6 +60,23 @@ export interface ModelData {
     bb: BoundingBox;
 }
 
+/** Annotation attached to a single point */
+export interface PointAnnotation {
+    type: 'point';
+    position: [number, number, number];
+    label: string;
+}
+
+/** Annotation indicating distance between two points */
+export interface DistanceAnnotation {
+    type: 'distance';
+    start: [number, number, number];
+    end: [number, number, number];
+    label: string;
+}
+
+export type Annotation = PointAnnotation | DistanceAnnotation;
+
 /** Props for Lambda360View component */
 export interface Lambda360ViewProps {
     /** Model data to display */
@@ -86,5 +103,7 @@ export interface Lambda360ViewProps {
     showViewMenu?: boolean;
     /** Footer content to display at the bottom of the viewer */
     footer?: React.ReactNode;
+    /** Annotations to display */
+    annotations?: Annotation[];
 }
 

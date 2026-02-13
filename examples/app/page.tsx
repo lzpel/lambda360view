@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Lambda360View } from 'lambda360view';
-import type { ModelData } from 'lambda360view';
+import type { ModelData, Annotation } from 'lambda360view';
 
 export default function Home() {
     const [model, setModel] = useState<ModelData | null>(null);
@@ -37,6 +37,24 @@ export default function Home() {
         loadModel();
     }, []);
 
+    const annotations = useMemo<Annotation[]>(() => {
+        if (!model) return [];
+        const { bb } = model;
+        return [
+            {
+                type: 'point',
+                position: [bb.xmax, bb.ymax, bb.zmax],
+                label: 'Material: SUS304'
+            },
+            {
+                type: 'distance',
+                start: [bb.xmin, bb.ymin, bb.zmin],
+                end: [bb.xmax, bb.ymin, bb.zmin],
+                label: `${(bb.xmax - bb.xmin).toFixed(0)}mm`
+            }
+        ];
+    }, [model]);
+
     if (error) {
         return (
             <main style={{
@@ -69,6 +87,10 @@ export default function Home() {
         );
     }
 
+
+
+
+
     return (
         <main style={{ width: '100vw', height: '100vh' }}>
             <Lambda360View
@@ -81,6 +103,7 @@ export default function Home() {
                 showViewMenu={true}
                 width="100%"
                 height="100%"
+                annotations={annotations}
 
                 footer={
                     <div style={{

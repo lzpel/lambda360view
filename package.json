@@ -19,15 +19,15 @@
         "three": "^0.182.0"
     },
     "peerDependencies": {
-        "react": "^18.3 || ^19",
-        "react-dom": "^18.3 || ^19"
+        "react": "^19",
+        "react-dom": "^19"
     },
     "devDependencies": {
         "@rollup/plugin-commonjs": "^25.0.0",
         "@rollup/plugin-node-resolve": "^15.0.0",
         "@rollup/plugin-typescript": "^11.0.0",
         "@types/react": "^19.0.0",
-        "@types/three": "^0.150.0",
+        "@types/three": "^0.150.2",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "rollup": "^4.0.0",
