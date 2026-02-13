@@ -81,6 +81,15 @@ export default function Home() {
                 showViewMenu={true}
                 width="100%"
                 height="100%"
+                annotations={[
+                    {
+                        type: 'point',
+                        position: [0, 0, 50],
+                        text: 'Top',
+                        color: '#ff0000',
+                        fontSize: 10
+                    }
+                ]}
             />
         </main>
     );

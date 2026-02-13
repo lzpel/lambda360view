@@ -19,33 +19,37 @@ const STROKE_WIDTH = 0.8;
 // --------------------
 // 既存: 座標軸
 // --------------------
-export const AxisIcon: React.FC<IconProps> = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    {/* X軸 (赤) */}
-    <line x1="12" y1="12" x2="22" y2="12" stroke={COLORS.axisX} strokeWidth="2" />
-    {/* Y軸 (緑) */}
-    <line x1="12" y1="12" x2="6" y2="18" stroke={COLORS.axisY} strokeWidth="2" />
-    {/* Z軸 (青) */}
-    <line x1="12" y1="12" x2="12" y2="2" stroke={COLORS.axisZ} strokeWidth="2" />
-  </svg>
-);
+export function AxisIcon({ size = 24 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* X軸 (赤) */}
+      <line x1="12" y1="12" x2="22" y2="12" stroke={COLORS.axisX} strokeWidth="2" />
+      {/* Y軸 (緑) */}
+      <line x1="12" y1="12" x2="6" y2="18" stroke={COLORS.axisY} strokeWidth="2" />
+      {/* Z軸 (青) */}
+      <line x1="12" y1="12" x2="12" y2="2" stroke={COLORS.axisZ} strokeWidth="2" />
+    </svg>
+  );
+}
 
 // --------------------
 // 既存: アイソメトリック
 // --------------------
-export const CubeIsoIcon: React.FC<IconProps> = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    {/* 立方体のアウトライン */}
-    {/* 上面 */}
-    <path d="M12 2 L22 7 L12 12 L2 7 Z" fill="none" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
-    {/* 左面 */}
-    <path d="M2 7 L12 12 L12 22 L2 17 Z" fill="none" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
-    {/* 右面 */}
-    <path d="M22 7 L12 12 L12 22 L22 17 Z" fill="none" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
-    {/* 中央の青い円 */}
-    <circle cx="12" cy="12" r="6" fill={COLORS.fill} />
-  </svg>
-);
+export function CubeIsoIcon({ size = 24 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* 立方体のアウトライン */}
+      {/* 上面 */}
+      <path d="M12 2 L22 7 L12 12 L2 7 Z" fill="none" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      {/* 左面 */}
+      <path d="M2 7 L12 12 L12 22 L2 17 Z" fill="none" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      {/* 右面 */}
+      <path d="M22 7 L12 12 L12 22 L22 17 Z" fill="none" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      {/* 中央の青い円 */}
+      <circle cx="12" cy="12" r="6" fill={COLORS.fill} />
+    </svg>
+  );
+}
 
 type CubeFace = 'front' | 'back' | 'top' | 'bottom' | 'left' | 'right';
 
@@ -53,7 +57,7 @@ interface CubeViewIconProps extends IconProps {
   highlightFace: CubeFace;
 }
 
-export const CubeViewIcon: React.FC<CubeViewIconProps> = ({ size = 24, highlightFace }) => {
+export function CubeViewIcon({ size = 24, highlightFace }: CubeViewIconProps) {
   const frontFill = highlightFace === 'front' ? COLORS.fill : 'none';
   const backFill = highlightFace === 'back' ? COLORS.fill : 'none';
   const topFill = highlightFace === 'top' ? COLORS.fill : 'none';
@@ -141,12 +145,12 @@ export const CubeViewIcon: React.FC<CubeViewIconProps> = ({ size = 24, highlight
       </g>
     </svg>
   );
-};
+}
 
 // 互換エクスポート
-export const CubeFrontIcon: React.FC<IconProps> = (props) => <CubeViewIcon {...props} highlightFace="front" />;
-export const CubeBackIcon: React.FC<IconProps> = (props) => <CubeViewIcon {...props} highlightFace="back" />;
-export const CubeTopIcon: React.FC<IconProps> = (props) => <CubeViewIcon {...props} highlightFace="top" />;
-export const CubeBottomIcon: React.FC<IconProps> = (props) => <CubeViewIcon {...props} highlightFace="bottom" />;
-export const CubeLeftIcon: React.FC<IconProps> = (props) => <CubeViewIcon {...props} highlightFace="left" />;
-export const CubeRightIcon: React.FC<IconProps> = (props) => <CubeViewIcon {...props} highlightFace="right" />;
+export function CubeFrontIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="front" />; }
+export function CubeBackIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="back" />; }
+export function CubeTopIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="top" />; }
+export function CubeBottomIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="bottom" />; }
+export function CubeLeftIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="left" />; }
+export function CubeRightIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="right" />; }

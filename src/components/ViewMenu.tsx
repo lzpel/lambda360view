@@ -19,12 +19,12 @@ interface ViewMenuProps {
     axisEnabled?: boolean;
 }
 
-export const ViewMenu: React.FC<ViewMenuProps> = ({
+export function ViewMenu({
     onViewChange,
     onToggleAxis,
     showAxisButton = true,
     axisEnabled = true,
-}) => {
+}: ViewMenuProps) {
     const buttonStyle: React.CSSProperties = {
         display: 'flex',
         alignItems: 'center',
@@ -108,4 +108,4 @@ export const ViewMenu: React.FC<ViewMenuProps> = ({
             ))}
         </div>
     );
-};
+}

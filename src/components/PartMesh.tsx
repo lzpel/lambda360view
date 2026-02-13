@@ -13,13 +13,13 @@ interface PartMeshProps {
 /**
  * Renders a single part with mesh and edges
  */
-export const PartMesh: React.FC<PartMeshProps> = ({
+export function PartMesh({
     shape,
     color,
     alpha,
     edgeColor,
     showEdges,
-}) => {
+}: PartMeshProps) {
     // Create buffer geometry for the mesh
     const meshGeometry = useMemo(() => {
         const geometry = new THREE.BufferGeometry();
@@ -96,4 +96,4 @@ export const PartMesh: React.FC<PartMeshProps> = ({
             )}
         </group>
     );
-};
+}

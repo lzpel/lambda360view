@@ -12,11 +12,11 @@ interface ModelRendererProps {
 /**
  * Renders the model hierarchy recursively
  */
-export const ModelRenderer: React.FC<ModelRendererProps> = ({
+export function ModelRenderer({
     model,
     edgeColor,
     showEdges,
-}) => {
+}: ModelRendererProps) {
     return (
         <group>
             {model.parts.map((part, index) => (
@@ -29,7 +29,7 @@ export const ModelRenderer: React.FC<ModelRendererProps> = ({
             ))}
         </group>
     );
-};
+}
 
 interface PartGroupProps {
     part: Part;
@@ -40,7 +40,7 @@ interface PartGroupProps {
 /**
  * Renders a part and its children with proper transforms
  */
-const PartGroup: React.FC<PartGroupProps> = ({ part, edgeColor, showEdges }) => {
+const PartGroup = ({ part, edgeColor, showEdges }: PartGroupProps) => {
     // Parse location data
     const position = part.loc?.[0] || [0, 0, 0];
     const quaternionArray = part.loc?.[1] || [0, 0, 0, 1];
