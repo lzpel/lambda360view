@@ -81,15 +81,20 @@ export default function Home() {
                 showViewMenu={true}
                 width="100%"
                 height="100%"
-                annotations={[
-                    {
-                        type: 'point',
-                        position: [0, 0, 50],
-                        text: 'Top',
-                        color: '#ff0000',
-                        fontSize: 10
-                    }
-                ]}
+
+                footer={
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '10px',
+                        color: '#666',
+                        fontSize: '12px',
+                        fontFamily: 'sans-serif'
+                    }}>
+                        <span>lambda360view</span>
+                        <span>powered by Surfic LLC</span>
+                    </div>
+                }
             />
         </main>
     );

@@ -84,5 +84,7 @@ export interface Lambda360ViewProps {
     orthographic?: boolean;
     /** Show view control menu bar (default: false) */
     showViewMenu?: boolean;
+    /** Footer content to display at the bottom of the viewer */
+    footer?: React.ReactNode;
 }
 

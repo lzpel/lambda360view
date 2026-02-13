@@ -69,6 +69,7 @@ export function Lambda360View({
 	upAxis = 'Y',
 	orthographic = false,
 	showViewMenu = false,
+	footer,
 }: Lambda360ViewProps) {
 	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
@@ -173,6 +174,18 @@ export function Lambda360View({
 					dampingFactor={0.05}
 				/>
 			</Canvas>
+			{footer && (
+				<div style={{
+					position: 'absolute',
+					bottom: 0,
+					left: 0,
+					right: 0,
+					pointerEvents: 'none', // Allow clicks to pass through to canvas
+					zIndex: 10
+				}}>
+					{footer}
+				</div>
+			)}
 		</div>
 	);
 };
