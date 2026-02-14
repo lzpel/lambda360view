@@ -1,64 +1,6 @@
 /**
- * Type definitions for hexapod.js format 3D model data
+ * Type definitions for lambda360view GLB-based 3D viewer
  */
-
-/** Shape data containing geometry information */
-export interface ShapeData {
-    vertices: Float32Array;
-    normals: Float32Array;
-    triangles: Uint32Array;
-    edges: Float32Array;
-    obj_vertices?: Float32Array;
-    face_types?: Uint32Array;
-    edge_types?: Uint32Array;
-    triangles_per_face?: Uint32Array;
-    segments_per_edge?: Uint32Array;
-}
-
-/** Location data: [position, quaternion] */
-export type Location = [
-    [number, number, number],
-    [number, number, number, number]
-];
-
-/** Individual part in the model hierarchy */
-export interface Part {
-    id: string;
-    name: string;
-    type: string;
-    subtype?: string;
-    shape?: ShapeData;
-    color?: string;
-    alpha?: number;
-    loc?: Location;
-    parts?: Part[];
-    state?: number[];
-    texture?: string | null;
-    renderback?: boolean;
-    accuracy?: number | null;
-    bb?: BoundingBox | null;
-}
-
-/** Bounding box dimensions */
-export interface BoundingBox {
-    xmin: number;
-    xmax: number;
-    ymin: number;
-    ymax: number;
-    zmin: number;
-    zmax: number;
-}
-
-/** Root model data structure */
-export interface ModelData {
-    version: number;
-    parts: Part[];
-    name: string;
-    id: string;
-    loc?: Location;
-    normal_len?: number;
-    bb: BoundingBox;
-}
 
 /** Annotation attached to a single point */
 export interface PointAnnotation {
@@ -79,8 +21,8 @@ export type Annotation = PointAnnotation | DistanceAnnotation;
 
 /** Props for Lambda360View component */
 export interface Lambda360ViewProps {
-    /** Model data to display */
-    model: ModelData;
+    /** GLB binary data (ArrayBuffer) to load directly */
+    model: ArrayBuffer;
     /** Background color (default: #1a1a2e) */
     backgroundColor?: string;
     /** Edge color (default: #000000) */
@@ -106,4 +48,3 @@ export interface Lambda360ViewProps {
     /** Annotations to display */
     annotations?: Annotation[];
 }
-

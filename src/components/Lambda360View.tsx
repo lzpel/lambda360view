@@ -4,8 +4,8 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Lambda360ViewProps } from '../types';
-import { ModelRenderer } from './ModelRenderer';
 import { Annotations } from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
 
@@ -27,19 +27,10 @@ function getUpAxisRotation(upAxis: 'Y' | 'Z' | '-Y' | '-Z'): THREE.Euler {
 	}
 }
 
-/**
- * Component that provides camera setter function via ref
- */
-/**
- * Handle for camera control
- */
 interface CameraHandle {
 	setPosition: (pos: [number, number, number]) => void;
 }
 
-/**
- * Component that provides camera setter function via ref
- */
 const CameraSetter = React.forwardRef<CameraHandle, {}>((_props, ref) => {
 	const { camera } = useThree();
 
@@ -58,7 +49,83 @@ const CameraSetter = React.forwardRef<CameraHandle, {}>((_props, ref) => {
 });
 
 /**
- * Lambda360View - A 3D viewer component for CAD-like models with edge display
+ * Component that renders a loaded GLB scene with edge overlays.
+ * Runs inside Canvas context.
+ */
+function GlbScene({
+	scene,
+	edgeColor,
+	showEdges,
+}: {
+	scene: THREE.Group;
+	edgeColor: string;
+	showEdges: boolean;
+}) {
+	const edgeLinesRef = useRef<THREE.LineSegments[]>([]);
+
+	// Create edge LineSegments and attach to mesh parents
+	useEffect(() => {
+		const lines: THREE.LineSegments[] = [];
+		scene.traverse((child) => {
+			if (child instanceof THREE.Mesh && child.userData.edges) {
+				const edgeData = new Float32Array(child.userData.edges);
+				const geometry = new THREE.BufferGeometry();
+				geometry.setAttribute(
+					'position',
+					new THREE.BufferAttribute(edgeData, 3)
+				);
+				const material = new THREE.LineBasicMaterial({
+					color: edgeColor,
+					linewidth: 1,
+				});
+				const lineSegments = new THREE.LineSegments(geometry, material);
+				lineSegments.userData._isEdge = true;
+				child.add(lineSegments);
+				lines.push(lineSegments);
+			}
+		});
+		edgeLinesRef.current = lines;
+
+		return () => {
+			lines.forEach((line) => {
+				line.parent?.remove(line);
+				line.geometry.dispose();
+				(line.material as THREE.Material).dispose();
+			});
+		};
+	}, [scene]);
+
+	// Update edge color
+	useEffect(() => {
+		edgeLinesRef.current.forEach((line) => {
+			(line.material as THREE.LineBasicMaterial).color.set(edgeColor);
+		});
+	}, [edgeColor]);
+
+	// Update edge visibility
+	useEffect(() => {
+		edgeLinesRef.current.forEach((line) => {
+			line.visible = showEdges;
+		});
+	}, [showEdges]);
+
+	// Apply polygonOffset to all mesh materials for proper edge rendering
+	useEffect(() => {
+		scene.traverse((child) => {
+			if (child instanceof THREE.Mesh) {
+				const mat = child.material as THREE.Material;
+				mat.polygonOffset = true;
+				mat.polygonOffsetFactor = 1;
+				mat.polygonOffsetUnits = 1;
+			}
+		});
+	}, [scene]);
+
+	return <primitive object={scene} />;
+}
+
+/**
+ * Lambda360View - A 3D viewer component for GLB models with edge display
  */
 export function Lambda360View({
 	model,
@@ -77,14 +144,29 @@ export function Lambda360View({
 }: Lambda360ViewProps) {
 	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
+	const [gltfScene, setGltfScene] = useState<THREE.Group | null>(null);
 
-	// Calculate camera position based on bounding box
+	// Parse GLB ArrayBuffer
+	useEffect(() => {
+		const loader = new GLTFLoader();
+		loader.parse(
+			model,
+			'',
+			(gltf) => {
+				setGltfScene(gltf.scene);
+			},
+			(error) => {
+				console.error('GLB parse error:', error);
+			}
+		);
+	}, [model]);
+
+	// Compute camera config from scene bounding box
 	const cameraConfig = useMemo(() => {
-		const bb = model.bb;
-		const sizeX = bb.xmax - bb.xmin;
-		const sizeY = bb.ymax - bb.ymin;
-		const sizeZ = bb.zmax - bb.zmin;
-		const maxSize = Math.max(sizeX, sizeY, sizeZ);
+		if (!gltfScene) return null;
+		const box = new THREE.Box3().setFromObject(gltfScene);
+		const size = box.getSize(new THREE.Vector3());
+		const maxSize = Math.max(size.x, size.y, size.z);
 		const distance = maxSize * 1.5;
 
 		return {
@@ -94,10 +176,10 @@ export function Lambda360View({
 			zoom: 2,
 			distance,
 		};
-	}, [model.bb]);
+	}, [gltfScene]);
 
-	// Handle view change from menu
 	const handleViewChange = (view: ViewType) => {
+		if (!cameraConfig) return;
 		const distance = cameraConfig.distance;
 		const positions: Record<ViewType, [number, number, number]> = {
 			iso: [distance, distance, distance],
@@ -111,7 +193,6 @@ export function Lambda360View({
 		cameraSetterRef.current?.setPosition(positions[view]);
 	};
 
-	// Get rotation for up axis conversion
 	const upAxisRotation = useMemo(() => getUpAxisRotation(upAxis), [upAxis]);
 
 	const containerStyle: React.CSSProperties = {
@@ -120,6 +201,26 @@ export function Lambda360View({
 		position: 'relative',
 		...style,
 	};
+
+	if (!gltfScene || !cameraConfig) {
+		return (
+			<div className={className} style={containerStyle}>
+				<div style={{
+					width: '100%',
+					height: '100%',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					background: backgroundColor,
+					color: '#fff',
+					fontFamily: 'sans-serif',
+				}}>
+					Loading...
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className={className} style={containerStyle}>
 			{showViewMenu && (
@@ -162,8 +263,8 @@ export function Lambda360View({
 				<directionalLight position={[-10, -10, -5]} intensity={0.3} />
 
 				<group rotation={upAxisRotation}>
-					<ModelRenderer
-						model={model}
+					<GlbScene
+						scene={gltfScene}
 						edgeColor={edgeColor}
 						showEdges={showEdges}
 					/>
@@ -185,7 +286,7 @@ export function Lambda360View({
 					bottom: 0,
 					left: 0,
 					right: 0,
-					pointerEvents: 'none', // Allow clicks to pass through to canvas
+					pointerEvents: 'none',
 					zIndex: 10
 				}}>
 					{footer}
@@ -193,4 +294,4 @@ export function Lambda360View({
 			)}
 		</div>
 	);
-};
+}

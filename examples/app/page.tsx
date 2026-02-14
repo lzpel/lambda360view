@@ -2,58 +2,35 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Lambda360View } from 'lambda360view';
-import type { ModelData, Annotation } from 'lambda360view';
+import type { Annotation } from 'lambda360view';
 
 export default function Home() {
-    const [model, setModel] = useState<ModelData | null>(null);
+    const [model, setModel] = useState<ArrayBuffer | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Load hexapod.js dynamically
-        const loadModel = async () => {
-            try {
-                // hexapod.js exports a global variable 'hexapod'
-                // We need to load it as a script and access the global
-                const script = document.createElement('script');
-                script.src = `${process.env.NEXT_PUBLIC_PREFIX}/hexapod.js`;
-                script.onload = () => {
-                    // @ts-ignore - hexapod is defined in the loaded script
-                    if (typeof window.hexapod !== 'undefined') {
-                        // @ts-ignore
-                        setModel(window.hexapod as ModelData);
-                    } else {
-                        setError('Failed to load model: hexapod variable not found');
-                    }
-                };
-                script.onerror = () => {
-                    setError('Failed to load hexapod.js');
-                };
-                document.head.appendChild(script);
-            } catch (e) {
-                setError(`Failed to load model: ${e}`);
-            }
-        };
-
-        loadModel();
+        fetch(`${process.env.NEXT_PUBLIC_PREFIX || ''}/hexapod.glb`)
+            .then((res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.arrayBuffer();
+            })
+            .then((buffer) => setModel(buffer))
+            .catch((e) => setError(`Failed to load model: ${e}`));
     }, []);
 
-    const annotations = useMemo<Annotation[]>(() => {
-        if (!model) return [];
-        const { bb } = model;
-        return [
-            {
-                type: 'point',
-                position: [bb.xmax, bb.ymax, bb.zmax],
-                label: 'Material: SUS304'
-            },
-            {
-                type: 'distance',
-                start: [bb.xmin, bb.ymin, bb.zmin],
-                end: [bb.xmax, bb.ymin, bb.zmin],
-                label: `${(bb.xmax - bb.xmin).toFixed(0)}mm`
-            }
-        ];
-    }, [model]);
+    const annotations = useMemo<Annotation[]>(() => [
+        {
+            type: 'point',
+            position: [152, 100, 44],
+            label: 'Material: SUS304',
+        },
+        {
+            type: 'distance',
+            start: [-152, -87, -62],
+            end: [152, -87, -62],
+            label: '304mm',
+        },
+    ], []);
 
     if (error) {
         return (
@@ -87,10 +64,6 @@ export default function Home() {
         );
     }
 
-
-
-
-
     return (
         <main style={{ width: '100vw', height: '100vh' }}>
             <Lambda360View
@@ -104,7 +77,6 @@ export default function Home() {
                 width="100%"
                 height="100%"
                 annotations={annotations}
-
                 footer={
                     <div style={{
                         display: 'flex',

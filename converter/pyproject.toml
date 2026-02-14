@@ -1,0 +1,12 @@
+[project]
+name = "hexapod-converter"
+version = "0.1.0"
+description = "Convert hexapod.js to GLB with edge data in extras"
+requires-python = ">=3.10"
+dependencies = [
+    "pygltflib>=1.16",
+    "numpy>=1.24",
+]
+
+[project.scripts]
+convert = "main:main"
