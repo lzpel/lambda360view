@@ -4,15 +4,14 @@
 
 /** Shape data containing geometry information */
 export interface ShapeData {
+    /** 頂点座標 (BufferGeometry の position 属性に使用) */
     vertices: Float32Array;
+    /** 法線ベクトル (ライティング計算に使用。未指定時は自動計算) */
     normals: Float32Array;
+    /** 三角形インデックス (BufferGeometry の index に使用) */
     triangles: Uint32Array;
+    /** エッジ頂点座標 (LineSegments の描画に使用) */
     edges: Float32Array;
-    obj_vertices?: Float32Array;
-    face_types?: Uint32Array;
-    edge_types?: Uint32Array;
-    triangles_per_face?: Uint32Array;
-    segments_per_edge?: Uint32Array;
 }
 
 /** Location data: [position, quaternion] */
@@ -23,20 +22,18 @@ export type Location = [
 
 /** Individual part in the model hierarchy */
 export interface Part {
+    /** パーツの一意識別子 (React の key として使用) */
     id: string;
-    name: string;
-    type: string;
-    subtype?: string;
+    /** シェイプデータ (メッシュ・エッジの描画に使用) */
     shape?: ShapeData;
+    /** 面の色 (デフォルト: #808080) */
     color?: string;
+    /** 透明度 (0-1、デフォルト: 1) */
     alpha?: number;
+    /** 位置・回転 [position, quaternion] */
     loc?: Location;
+    /** 子パーツの配列 (階層構造) */
     parts?: Part[];
-    state?: number[];
-    texture?: string | null;
-    renderback?: boolean;
-    accuracy?: number | null;
-    bb?: BoundingBox | null;
 }
 
 /** Bounding box dimensions */
@@ -51,12 +48,9 @@ export interface BoundingBox {
 
 /** Root model data structure */
 export interface ModelData {
-    version: number;
+    /** パーツ配列 (ModelRenderer で描画対象として走査) */
     parts: Part[];
-    name: string;
-    id: string;
-    loc?: Location;
-    normal_len?: number;
+    /** バウンディングボックス (カメラ位置の自動計算に使用) */
     bb: BoundingBox;
 }
 
