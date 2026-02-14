@@ -4,10 +4,11 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
-import type { Lambda360ViewProps } from '../types';
+import type { Lambda360ViewProps, ModelData } from '../types';
 import { ModelRenderer } from './ModelRenderer';
 import { Annotations } from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
+import { loadGlb, loadGlbFromBuffer } from '../loaders/glbLoader';
 
 /**
  * Get rotation to convert from model's up axis to Three.js Y-up
@@ -61,7 +62,9 @@ const CameraSetter = React.forwardRef<CameraHandle, {}>((_props, ref) => {
  * Lambda360View - A 3D viewer component for CAD-like models with edge display
  */
 export function Lambda360View({
-	model,
+	model: modelProp,
+	glbUrl,
+	glbData,
 	backgroundColor = '#1a1a2e',
 	edgeColor = '#000000',
 	showEdges = true,
@@ -78,8 +81,34 @@ export function Lambda360View({
 	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
 
+	// GLB loading state
+	const [glbModel, setGlbModel] = useState<ModelData | null>(null);
+	const [glbError, setGlbError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (modelProp) return; // JSON prop takes priority
+
+		let cancelled = false;
+
+		if (glbUrl) {
+			loadGlb(glbUrl)
+				.then((m) => { if (!cancelled) setGlbModel(m); })
+				.catch((e) => { if (!cancelled) setGlbError(String(e)); });
+		} else if (glbData) {
+			loadGlbFromBuffer(glbData)
+				.then((m) => { if (!cancelled) setGlbModel(m); })
+				.catch((e) => { if (!cancelled) setGlbError(String(e)); });
+		}
+
+		return () => { cancelled = true; };
+	}, [modelProp, glbUrl, glbData]);
+
+	// Resolve final model: JSON prop > loaded GLB
+	const model = modelProp ?? glbModel;
+
 	// Calculate camera position based on bounding box
 	const cameraConfig = useMemo(() => {
+		if (!model) return null;
 		const bb = model.bb;
 		const sizeX = bb.xmax - bb.xmin;
 		const sizeY = bb.ymax - bb.ymin;
@@ -94,10 +123,11 @@ export function Lambda360View({
 			zoom: 2,
 			distance,
 		};
-	}, [model.bb]);
+	}, [model]);
 
 	// Handle view change from menu
 	const handleViewChange = (view: ViewType) => {
+		if (!cameraConfig) return;
 		const distance = cameraConfig.distance;
 		const positions: Record<ViewType, [number, number, number]> = {
 			iso: [distance, distance, distance],
@@ -113,6 +143,14 @@ export function Lambda360View({
 
 	// Get rotation for up axis conversion
 	const upAxisRotation = useMemo(() => getUpAxisRotation(upAxis), [upAxis]);
+
+	if (glbError && !model) {
+		return <div style={{ color: 'red' }}>GLB load error: {glbError}</div>;
+	}
+
+	if (!model || !cameraConfig) {
+		return <div style={{ color: '#888' }}>Loading...</div>;
+	}
 
 	const containerStyle: React.CSSProperties = {
 		width,

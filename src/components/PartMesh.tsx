@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import type { ShapeData } from '../types';
 
 interface PartMeshProps {
-    shape: ShapeData;
+    shape?: ShapeData;
+    geometry?: THREE.BufferGeometry;
+    edgeGeometry?: THREE.BufferGeometry;
     color: string;
     alpha: number;
     edgeColor: string;
@@ -11,10 +13,15 @@ interface PartMeshProps {
 }
 
 /**
- * Renders a single part with mesh and edges
+ * Renders a single part with mesh and edges.
+ * Supports two input paths:
+ *   - shape (ShapeData): builds BufferGeometry from raw arrays (JSON pipeline)
+ *   - geometry (BufferGeometry): uses pre-built geometry directly (GLB pipeline)
  */
 export function PartMesh({
     shape,
+    geometry,
+    edgeGeometry,
     color,
     alpha,
     edgeColor,
@@ -22,17 +29,23 @@ export function PartMesh({
 }: PartMeshProps) {
     // Create buffer geometry for the mesh
     const meshGeometry = useMemo(() => {
-        const geometry = new THREE.BufferGeometry();
+        // GLB path: use pre-built geometry directly
+        if (geometry) return geometry;
+
+        // JSON path: build geometry from ShapeData
+        if (!shape) return null;
+
+        const geo = new THREE.BufferGeometry();
 
         // Vertices are stored as flat array [x1, y1, z1, x2, y2, z2, ...]
-        geometry.setAttribute(
+        geo.setAttribute(
             'position',
             new THREE.BufferAttribute(shape.vertices, 3)
         );
 
         // Normals
         if (shape.normals && shape.normals.length > 0) {
-            geometry.setAttribute(
+            geo.setAttribute(
                 'normal',
                 new THREE.BufferAttribute(shape.normals, 3)
             );
@@ -40,35 +53,41 @@ export function PartMesh({
 
         // Triangle indices
         if (shape.triangles && shape.triangles.length > 0) {
-            geometry.setIndex(new THREE.BufferAttribute(shape.triangles, 1));
+            geo.setIndex(new THREE.BufferAttribute(shape.triangles, 1));
         }
 
         // Compute normals if not provided
         if (!shape.normals || shape.normals.length === 0) {
-            geometry.computeVertexNormals();
+            geo.computeVertexNormals();
         }
 
-        return geometry;
-    }, [shape.vertices, shape.normals, shape.triangles]);
+        return geo;
+    }, [geometry, shape?.vertices, shape?.normals, shape?.triangles]);
 
     // Create line geometry for edges
-    const edgeGeometry = useMemo(() => {
-        if (!shape.edges || shape.edges.length === 0) {
+    const resolvedEdgeGeometry = useMemo(() => {
+        // GLB path: use pre-built edge geometry
+        if (edgeGeometry) return edgeGeometry;
+
+        // JSON path: build from ShapeData edges
+        if (!shape?.edges || shape.edges.length === 0) {
             return null;
         }
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute(
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute(
             'position',
             new THREE.BufferAttribute(shape.edges, 3)
         );
 
-        return geometry;
-    }, [shape.edges]);
+        return geo;
+    }, [edgeGeometry, shape?.edges]);
 
     // Parse color
     const meshColor = useMemo(() => new THREE.Color(color), [color]);
     const lineColor = useMemo(() => new THREE.Color(edgeColor), [edgeColor]);
+
+    if (!meshGeometry) return null;
 
     return (
         <group>
@@ -86,8 +105,8 @@ export function PartMesh({
             </mesh>
 
             {/* Edges */}
-            {showEdges && edgeGeometry && (
-                <lineSegments geometry={edgeGeometry}>
+            {showEdges && resolvedEdgeGeometry && (
+                <lineSegments geometry={resolvedEdgeGeometry}>
                     <lineBasicMaterial
                         color={lineColor}
                         linewidth={1}

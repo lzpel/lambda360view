@@ -2,6 +2,8 @@
  * Type definitions for hexapod.js format 3D model data
  */
 
+import type { BufferGeometry } from 'three';
+
 /** Shape data containing geometry information */
 export interface ShapeData {
     vertices: Float32Array;
@@ -28,15 +30,19 @@ export interface Part {
     type: string;
     subtype?: string;
     shape?: ShapeData;
+    geometry?: BufferGeometry;
+    edgeGeometry?: BufferGeometry;
     color?: string;
     alpha?: number;
     loc?: Location;
+    scale?: [number, number, number];
     parts?: Part[];
     state?: number[];
     texture?: string | null;
     renderback?: boolean;
     accuracy?: number | null;
     bb?: BoundingBox | null;
+    extras?: Record<string, unknown>;
 }
 
 /** Bounding box dimensions */
@@ -79,8 +85,12 @@ export type Annotation = PointAnnotation | DistanceAnnotation;
 
 /** Props for Lambda360View component */
 export interface Lambda360ViewProps {
-    /** Model data to display */
-    model: ModelData;
+    /** Model data to display (JSON format) */
+    model?: ModelData;
+    /** GLB file URL to load */
+    glbUrl?: string;
+    /** GLB binary data (ArrayBuffer) to load directly */
+    glbData?: ArrayBuffer;
     /** Background color (default: #1a1a2e) */
     backgroundColor?: string;
     /** Edge color (default: #000000) */

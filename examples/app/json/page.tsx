@@ -1,0 +1,120 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { Lambda360View } from 'lambda360view';
+import type { ModelData, Annotation } from 'lambda360view';
+
+export default function Home() {
+    const [model, setModel] = useState<ModelData | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Load hexapod.js dynamically
+        const loadModel = async () => {
+            try {
+                // hexapod.js exports a global variable 'hexapod'
+                // We need to load it as a script and access the global
+                const script = document.createElement('script');
+                script.src = `${process.env.NEXT_PUBLIC_PREFIX}/hexapod.js`;
+                script.onload = () => {
+                    // @ts-ignore - hexapod is defined in the loaded script
+                    if (typeof window.hexapod !== 'undefined') {
+                        // @ts-ignore
+                        setModel(window.hexapod as ModelData);
+                    } else {
+                        setError('Failed to load model: hexapod variable not found');
+                    }
+                };
+                script.onerror = () => {
+                    setError('Failed to load hexapod.js');
+                };
+                document.head.appendChild(script);
+            } catch (e) {
+                setError(`Failed to load model: ${e}`);
+            }
+        };
+
+        loadModel();
+    }, []);
+
+    const annotations = useMemo<Annotation[]>(() => {
+        if (!model) return [];
+        const { bb } = model;
+        return [
+            {
+                type: 'point',
+                position: [bb.xmax, bb.ymax, bb.zmax],
+                label: 'Material: SUS304'
+            },
+            {
+                type: 'distance',
+                start: [bb.xmin, bb.ymin, bb.zmin],
+                end: [bb.xmax, bb.ymin, bb.zmin],
+                label: `${(bb.xmax - bb.xmin).toFixed(0)}mm`
+            }
+        ];
+    }, [model]);
+
+    if (error) {
+        return (
+            <main style={{
+                width: '100vw',
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#1a1a2e',
+                color: '#fff'
+            }}>
+                <p>{error}</p>
+            </main>
+        );
+    }
+
+    if (!model) {
+        return (
+            <main style={{
+                width: '100vw',
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#1a1a2e',
+                color: '#fff'
+            }}>
+                <p>Loading model...</p>
+            </main>
+        );
+    }
+
+    return (
+        <main style={{ width: '100vw', height: '100vh' }}>
+            <Lambda360View
+                model={model}
+                backgroundColor="#f0f0f0"
+                edgeColor="#000000"
+                showEdges={true}
+                orthographic={true}
+                upAxis="Z"
+                showViewMenu={true}
+                width="100%"
+                height="100%"
+                annotations={annotations}
+
+                footer={
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '10px',
+                        color: '#666',
+                        fontSize: '12px',
+                        fontFamily: 'sans-serif'
+                    }}>
+                        <span>lambda360view - JSON example</span>
+                        <span>powered by Surfic LLC</span>
+                    </div>
+                }
+            />
+        </main>
+    );
+}

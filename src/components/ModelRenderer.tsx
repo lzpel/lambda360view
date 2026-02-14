@@ -44,6 +44,7 @@ const PartGroup = ({ part, edgeColor, showEdges }: PartGroupProps) => {
     // Parse location data
     const position = part.loc?.[0] || [0, 0, 0];
     const quaternionArray = part.loc?.[1] || [0, 0, 0, 1];
+    const scale = part.scale || [1, 1, 1];
 
     // Create quaternion from array [x, y, z, w]
     const quaternion = new THREE.Quaternion(
@@ -57,11 +58,14 @@ const PartGroup = ({ part, edgeColor, showEdges }: PartGroupProps) => {
         <group
             position={position}
             quaternion={quaternion}
+            scale={scale}
         >
-            {/* Render this part's mesh if it has shape data */}
-            {part.shape && (
+            {/* Render this part's mesh if it has shape data or geometry */}
+            {(part.shape || part.geometry) && (
                 <PartMesh
                     shape={part.shape}
+                    geometry={part.geometry}
+                    edgeGeometry={part.edgeGeometry}
                     color={part.color || '#808080'}
                     alpha={part.alpha ?? 1}
                     edgeColor={edgeColor}
