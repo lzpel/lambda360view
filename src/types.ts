@@ -6,15 +6,14 @@ import type { BufferGeometry } from 'three';
 
 /** Shape data containing geometry information */
 export interface ShapeData {
+    /** メッシュ頂点座標。フラット配列 [x1,y1,z1, x2,y2,z2, ...] */
     vertices: Float32Array;
+    /** 頂点法線ベクトル。フラット配列 [nx1,ny1,nz1, ...] 空の場合はcomputeVertexNormalsで自動計算 */
     normals: Float32Array;
+    /** 三角形インデックス。3つ組で1三角形 [i1,i2,i3, i4,i5,i6, ...] verticesへの参照 */
     triangles: Uint32Array;
+    /** エッジ線分の頂点座標。2頂点で1線分 [x1,y1,z1, x2,y2,z2, x3,y3,z3, x4,y4,z4, ...] */
     edges: Float32Array;
-    obj_vertices?: Float32Array;
-    face_types?: Uint32Array;
-    edge_types?: Uint32Array;
-    triangles_per_face?: Uint32Array;
-    segments_per_edge?: Uint32Array;
 }
 
 /** Location data: [position, quaternion] */
@@ -25,23 +24,33 @@ export type Location = [
 
 /** Individual part in the model hierarchy */
 export interface Part {
+    /** パーツの一意識別子 */
     id: string;
+    /** パーツ名 */
     name: string;
+    /** パーツ種別 (例: "solid") */
     type: string;
+    /** パーツ副種別 */
     subtype?: string;
+    /** メッシュ形状データ (JSON渡し時に使用) */
     shape?: ShapeData;
+    /** パース済みBufferGeometry (GLB渡し時に使用) */
     geometry?: BufferGeometry;
+    /** パース済みエッジBufferGeometry (GLB渡し時に使用) */
     edgeGeometry?: BufferGeometry;
+    /** 表示色 (CSS hex文字列 例: "#808080") */
     color?: string;
+    /** 不透明度 0.0〜1.0 (デフォルト: 1) */
     alpha?: number;
+    /** ローカル座標変換 [position, quaternion] */
     loc?: Location;
+    /** ローカルスケール [sx, sy, sz] (デフォルト: [1,1,1]) */
     scale?: [number, number, number];
+    /** 子パーツ (再帰的な木構造) */
     parts?: Part[];
-    state?: number[];
-    texture?: string | null;
-    renderback?: boolean;
-    accuracy?: number | null;
+    /** パーツ単位のバウンディングボックス */
     bb?: BoundingBox | null;
+    /** GLBのextras等から取得した任意メタデータ */
     extras?: Record<string, unknown>;
 }
 
