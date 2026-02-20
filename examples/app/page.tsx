@@ -9,7 +9,7 @@ export default function Home() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch(`${process.env.NEXT_PUBLIC_PREFIX || ''}/hexapod.glb`)
+        fetch(`${process.env.NEXT_PUBLIC_PREFIX || ''}/PA-001-DF7.glb`)
             .then((res) => {
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return res.arrayBuffer();
