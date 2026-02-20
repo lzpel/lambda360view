@@ -56,57 +56,52 @@ function GlbScene({
 	scene,
 	edgeColor,
 	showEdges,
+	edgePositions,
 }: {
 	scene: THREE.Group;
 	edgeColor: string;
 	showEdges: boolean;
+	edgePositions: Float32Array | null;
 }) {
-	const edgeLinesRef = useRef<THREE.LineSegments[]>([]);
+	const edgeLineRef = useRef<THREE.LineSegments | null>(null);
 
-	// Create edge LineSegments and attach to mesh parents
+	// Create edge LineSegments from orphan accessor data
 	useEffect(() => {
-		const lines: THREE.LineSegments[] = [];
-		scene.traverse((child) => {
-			if (child instanceof THREE.Mesh && child.userData.edges) {
-				const edgeData = new Float32Array(child.userData.edges);
-				const geometry = new THREE.BufferGeometry();
-				geometry.setAttribute(
-					'position',
-					new THREE.BufferAttribute(edgeData, 3)
-				);
-				const material = new THREE.LineBasicMaterial({
-					color: edgeColor,
-					linewidth: 1,
-				});
-				const lineSegments = new THREE.LineSegments(geometry, material);
-				lineSegments.userData._isEdge = true;
-				child.add(lineSegments);
-				lines.push(lineSegments);
-			}
+		if (!edgePositions) return;
+		const geometry = new THREE.BufferGeometry();
+		geometry.setAttribute(
+			'position',
+			new THREE.BufferAttribute(edgePositions, 3)
+		);
+		const material = new THREE.LineBasicMaterial({
+			color: edgeColor,
+			linewidth: 1,
 		});
-		edgeLinesRef.current = lines;
+		const lineSegments = new THREE.LineSegments(geometry, material);
+		lineSegments.userData._isEdge = true;
+		scene.add(lineSegments);
+		edgeLineRef.current = lineSegments;
 
 		return () => {
-			lines.forEach((line) => {
-				line.parent?.remove(line);
-				line.geometry.dispose();
-				(line.material as THREE.Material).dispose();
-			});
+			scene.remove(lineSegments);
+			geometry.dispose();
+			material.dispose();
+			edgeLineRef.current = null;
 		};
-	}, [scene]);
+	}, [scene, edgePositions]);
 
 	// Update edge color
 	useEffect(() => {
-		edgeLinesRef.current.forEach((line) => {
-			(line.material as THREE.LineBasicMaterial).color.set(edgeColor);
-		});
+		if (edgeLineRef.current) {
+			(edgeLineRef.current.material as THREE.LineBasicMaterial).color.set(edgeColor);
+		}
 	}, [edgeColor]);
 
 	// Update edge visibility
 	useEffect(() => {
-		edgeLinesRef.current.forEach((line) => {
-			line.visible = showEdges;
-		});
+		if (edgeLineRef.current) {
+			edgeLineRef.current.visible = showEdges;
+		}
 	}, [showEdges]);
 
 	// Apply polygonOffset to all mesh materials for proper edge rendering
@@ -145,6 +140,7 @@ export function Lambda360View({
 	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
 	const [gltfScene, setGltfScene] = useState<THREE.Group | null>(null);
+	const [edgePositions, setEdgePositions] = useState<Float32Array | null>(null);
 
 	// Parse GLB ArrayBuffer
 	useEffect(() => {
@@ -154,6 +150,14 @@ export function Lambda360View({
 			'',
 			(gltf) => {
 				setGltfScene(gltf.scene);
+				const edgeAccessorIndex = gltf.userData?.edgeAccessor;
+				if (edgeAccessorIndex !== undefined) {
+					gltf.parser.getDependency('accessor', edgeAccessorIndex).then((attr: THREE.BufferAttribute) => {
+						setEdgePositions(attr.array as Float32Array);
+					});
+				} else {
+					setEdgePositions(null);
+				}
 			},
 			(error) => {
 				console.error('GLB parse error:', error);
@@ -267,6 +271,7 @@ export function Lambda360View({
 						scene={gltfScene}
 						edgeColor={edgeColor}
 						showEdges={showEdges}
+						edgePositions={edgePositions}
 					/>
 					{annotations && <Annotations annotations={annotations} />}
 					{showAxis && (

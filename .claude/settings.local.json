@@ -4,7 +4,11 @@
       "Bash(npx tsc:*)",
       "Bash(find:*)",
       "Bash(uv:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(pip3:*)"
     ]
   }
 }
