@@ -47,4 +47,6 @@ export interface Lambda360ViewProps {
     footer?: React.ReactNode;
     /** Annotations to display */
     annotations?: Annotation[];
+    /** Preserve camera position/zoom/OrbitControls state when model changes (default: true) */
+    preserveCamera?: boolean;
 }

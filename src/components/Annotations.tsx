@@ -6,21 +6,21 @@ import { Annotation, PointAnnotation, DistanceAnnotation } from '../types';
 const PointAnnotationRenderer = ({ annotation }: { annotation: PointAnnotation }) => {
     const { position, label } = annotation;
 
-    // Offset for the label to visualize a leader line
-    // In a real CAD app, this might be view-dependent or manually positioned.
-    // Here we'll use a fixed vertical offset for simplicity.
+    // ラベルのオフセットで引き出し線を可視化するんやで
+    // 実際のCADアプリやったら、これは視点に依存するか手動で配置されるかもしれんな。
+    // ここではシンプルにするために固定の垂直オフセットを使うで。
     const offsetHeight = 50;
     const endPosition: [number, number, number] = [position[0], position[1] + offsetHeight, position[2]];
 
     return (
         <group>
-            {/* Marker at the point */}
+            {/* ポイントのマーカーや */}
             <mesh position={position}>
                 <sphereGeometry args={[2]} />
                 <meshBasicMaterial color="#ff0000" />
             </mesh>
 
-            {/* Leader Line */}
+            {/* 引き出し線やで */}
             <Line
                 points={[position, endPosition]}
                 color="black"
@@ -53,29 +53,29 @@ const DistanceAnnotationRenderer = ({ annotation }: { annotation: DistanceAnnota
     const direction = useMemo(() => endVec.clone().sub(startVec).normalize(), [startVec, endVec]);
     const length = useMemo(() => startVec.distanceTo(endVec), [startVec, endVec]);
 
-    // Calculate rotation for arrowheads
+    // 矢印の回転を計算するで
     const quaternion = useMemo(() => {
         const dummy = new THREE.Object3D();
-        dummy.lookAt(direction); // default lookAt is +z
-        // Cone geometry points up (+y) by default? No, usually +y.
-        // We need to align the cone with the line.
-        // Let's rely on LookAt appearing correct.
+        // デフォルトのlookAtは+zやで
+        // コーンジオメトリのデフォルトの向きは上(+y)か？いや、たぶん+yやな。
+        // コーンを線に沿わせる必要があるんや。
+        // LookAtが賢くやってくれるのを信じよか。
         return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
     }, [direction]);
 
     return (
         <group>
-            {/* Main Line */}
+            {/* メインの線や */}
             <Line
                 points={[start, end]}
                 color="black"
                 lineWidth={1}
             />
 
-            {/* End Markers (Vertical Ticks) */}
-            {/* To draw ticks perpendicular to the line is hard without a reference up vector. 
-                We'll skip ticks for now and just use arrows or dots.
-                Let's use small spheres at the endpoints.
+            {/* 端点のマーカー（垂直な短い線）や */}
+            {/* 線に対して垂直な短い線を引くのは、基準となる上方向ベクトルがないと難しいんや。 
+                とりあえず今は短い線はスキップして、矢印かドットを使うことにするで。
+                端点に小さな球を置くことにしよか。
             */}
             <mesh position={start}>
                 <sphereGeometry args={[1]} />

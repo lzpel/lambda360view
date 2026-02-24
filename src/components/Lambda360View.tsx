@@ -5,12 +5,12 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { Lambda360ViewProps } from '../types';
+import type { Lambda360ViewProps, Annotation } from '../types';
 import { Annotations } from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
 
 /**
- * Get rotation to convert from model's up axis to Three.js Y-up
+ * モデルの上方向軸からThree.jsのY-upに変換する回転を取得するで
  */
 function getUpAxisRotation(upAxis: 'Y' | 'Z' | '-Y' | '-Z'): THREE.Euler {
 	switch (upAxis) {
@@ -27,30 +27,25 @@ function getUpAxisRotation(upAxis: 'Y' | 'Z' | '-Y' | '-Z'): THREE.Euler {
 	}
 }
 
-interface CameraHandle {
-	setPosition: (pos: [number, number, number]) => void;
+function disposeScene(scene: THREE.Group) {
+	scene.traverse((child: any) => {
+		if (child.geometry) {
+			child.geometry.dispose();
+		}
+
+		if (child.material) {
+			if (Array.isArray(child.material)) {
+				child.material.forEach((m: THREE.Material) => m.dispose());
+			} else {
+				child.material.dispose();
+			}
+		}
+	});
 }
 
-const CameraSetter = React.forwardRef<CameraHandle, {}>((_props, ref) => {
-	const { camera } = useThree();
-
-	React.useImperativeHandle(
-		ref,
-		() => ({
-			setPosition: (pos: [number, number, number]) => {
-				camera.position.set(pos[0], pos[1], pos[2]);
-				camera.lookAt(0, 0, 0);
-			},
-		}),
-		[camera]
-	);
-
-	return null;
-});
-
 /**
- * Component that renders a loaded GLB scene with edge overlays.
- * Runs inside Canvas context.
+ * エッジのオーバーレイと一緒にロードされたGLBシーンをレンダリングするコンポーネントや。
+ * Canvasコンテキストの中で動くで。
  */
 function GlbScene({
 	scene,
@@ -65,7 +60,7 @@ function GlbScene({
 }) {
 	const edgeLineRef = useRef<THREE.LineSegments | null>(null);
 
-	// Create edge LineSegments from orphan accessor data
+	// 孤立したアクセサーデータからエッジのLineSegmentsを作るで
 	useEffect(() => {
 		if (!edgePositions) return;
 		const geometry = new THREE.BufferGeometry();
@@ -90,21 +85,21 @@ function GlbScene({
 		};
 	}, [scene, edgePositions]);
 
-	// Update edge color
+	// エッジの色を更新するで
 	useEffect(() => {
 		if (edgeLineRef.current) {
 			(edgeLineRef.current.material as THREE.LineBasicMaterial).color.set(edgeColor);
 		}
 	}, [edgeColor]);
 
-	// Update edge visibility
+	// エッジの表示・非表示を切り替えるで
 	useEffect(() => {
 		if (edgeLineRef.current) {
 			edgeLineRef.current.visible = showEdges;
 		}
 	}, [showEdges]);
 
-	// Apply polygonOffset to all mesh materials for proper edge rendering
+	// エッジがちゃんと描画されるように、全てのメッシュのマテリアルにpolygonOffsetを適用するで
 	useEffect(() => {
 		scene.traverse((child) => {
 			if (child instanceof THREE.Mesh) {
@@ -119,8 +114,227 @@ function GlbScene({
 	return <primitive object={scene} />;
 }
 
+// ------ 新しい SceneManager の実装 ------
+interface SceneManagerProps {
+	model: ArrayBuffer;
+	preserveCamera: boolean;
+	edgeColor: string;
+	showEdges: boolean;
+	upAxisRotation: THREE.Euler;
+	annotations?: Annotation[];
+	showAxis: boolean;
+	viewRequest: { type: ViewType; ts: number } | null;
+	orthographic: boolean;
+	onLoading: (loading: boolean) => void;
+}
+
+function SceneManager({
+	model,
+	preserveCamera,
+	edgeColor,
+	showEdges,
+	upAxisRotation,
+	annotations,
+	showAxis,
+	viewRequest,
+	orthographic,
+	onLoading
+}: SceneManagerProps) {
+	const { camera, controls } = useThree();
+
+	const [displayScene, setDisplayScene] = useState<THREE.Group | null>(null);
+	const [displayEdgePositions, setDisplayEdgePositions] = useState<Float32Array | null>(null);
+
+	const prevSceneRef = useRef<THREE.Group | null>(null);
+
+	// モデル読み込みとシームレス切り替え
+	useEffect(() => {
+		let cancelled = false;
+		const loader = new GLTFLoader();
+
+		// 前回のシーンが存在していて、preserveCamera が true ならカメラ状態を記憶
+		const hasPrevScene = prevSceneRef.current !== null;
+		const savedCameraState = hasPrevScene && preserveCamera
+			? {
+				position: camera.position.clone(),
+				zoom: (camera as any).zoom ?? 1,
+				target: (controls as any)?.target?.clone() ?? new THREE.Vector3(0, 0, 0),
+			}
+			: null;
+
+		// 最初の読み込み時だけローディングを出す
+		if (!hasPrevScene) onLoading(true);
+
+		loader.parse(
+			model,
+			'',
+			(gltf) => {
+				if (cancelled) return;
+
+				const newScene = gltf.scene;
+				const edgeAccessorIndex = gltf.userData?.edgeAccessor;
+
+				const finalize = (edges: Float32Array | null) => {
+					if (cancelled) return;
+
+					// 前のシーンのリソースをお片付けするで
+					if (prevSceneRef.current) {
+						disposeScene(prevSceneRef.current);
+					}
+
+					prevSceneRef.current = newScene;
+					setDisplayScene(newScene);
+					setDisplayEdgePositions(edges);
+
+					// スワップした後にカメラの状態を元に戻すで
+					if (savedCameraState) {
+						// 完全にレンダリングされてからカメラを復元する
+						requestAnimationFrame(() => {
+							if (!cancelled) {
+								camera.position.copy(savedCameraState.position);
+								(camera as any).zoom = savedCameraState.zoom;
+								camera.updateProjectionMatrix();
+								const orbitControls = controls as any;
+								if (orbitControls?.target) {
+									orbitControls.target.copy(savedCameraState.target);
+									orbitControls.update?.();
+								}
+							}
+						});
+					}
+
+					if (!hasPrevScene) onLoading(false);
+				};
+
+				if (edgeAccessorIndex !== undefined) {
+					gltf.parser.getDependency('accessor', edgeAccessorIndex).then((attr: THREE.BufferAttribute) => {
+						finalize(attr.array as Float32Array);
+					});
+				} else {
+					finalize(null);
+				}
+			},
+			(error) => {
+				console.error('GLB parse error:', error);
+				if (!hasPrevScene) onLoading(false);
+			}
+		);
+
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [model]); // モデル本体が変わった時だけ発火させる
+
+	// アンマウント時のお片付けや
+	useEffect(() => {
+		return () => {
+			if (prevSceneRef.current) {
+				disposeScene(prevSceneRef.current);
+				prevSceneRef.current = null;
+			}
+		};
+	}, []);
+
+	// シーンのバウンディングボックスからカメラ設定と距離を計算するで
+	const cameraConfig = useMemo(() => {
+		if (!displayScene) return null;
+		const box = new THREE.Box3().setFromObject(displayScene);
+		const size = box.getSize(new THREE.Vector3());
+		const maxSize = Math.max(size.x, size.y, size.z);
+		const distance = maxSize * 1.5;
+
+		return {
+			position: [distance, distance * 0.5, distance] as [number, number, number],
+			far: maxSize * 10,
+			near: 0.1,
+			zoom: 2,
+			distance,
+		};
+	}, [displayScene]);
+
+	// ビュー切り替えの処理や
+	useEffect(() => {
+		if (!viewRequest || !cameraConfig || !camera) return;
+		const distance = cameraConfig.distance;
+		const positions: Record<ViewType, [number, number, number]> = {
+			iso: [distance, distance, distance],
+			front: [0, 0, distance],
+			back: [0, 0, -distance],
+			top: [0, distance, 0],
+			bottom: [0, -distance, 0],
+			left: [-distance, 0, 0],
+			right: [distance, 0, 0],
+		};
+
+		const pos = positions[viewRequest.type];
+		camera.position.set(pos[0], pos[1], pos[2]);
+		camera.lookAt(0, 0, 0);
+		camera.updateProjectionMatrix();
+
+		const orbitControls = controls as any;
+		if (orbitControls?.target) {
+			orbitControls.target.set(0, 0, 0);
+			orbitControls.update?.();
+		}
+	}, [viewRequest, cameraConfig, camera, controls]);
+
+	if (!displayScene || !cameraConfig) return null;
+
+	return (
+		<>
+			{orthographic ? (
+				<OrthographicCamera
+					makeDefault
+					position={cameraConfig.position}
+					zoom={cameraConfig.zoom}
+					near={cameraConfig.near}
+					far={cameraConfig.far}
+				/>
+			) : (
+				<PerspectiveCamera
+					makeDefault
+					position={cameraConfig.position}
+					fov={50}
+					near={cameraConfig.near}
+					far={cameraConfig.far}
+				/>
+			)}
+
+			<ambientLight intensity={0.6} />
+			<directionalLight position={[10, 10, 5]} intensity={0.8} />
+			<directionalLight position={[-10, -10, -5]} intensity={0.3} />
+
+			<group rotation={upAxisRotation}>
+				<GlbScene
+					scene={displayScene}
+					edgeColor={edgeColor}
+					showEdges={showEdges}
+					edgePositions={displayEdgePositions}
+				/>
+				{annotations && <Annotations annotations={annotations} />}
+				{showAxis && (
+					<axesHelper args={[cameraConfig.distance * 0.5]} />
+				)}
+			</group>
+
+			<OrbitControls
+				makeDefault
+				target={[0, 0, 0]}
+				enableDamping
+				dampingFactor={0.05}
+			/>
+		</>
+	);
+}
+
 /**
- * Lambda360View - A 3D viewer component for GLB models with edge display
+ * Lambda360View - GLBモデルを表示してエッジも出せる3Dビューアーコンポーネントやで。
+ *
+ * シームレスなモデルの切り替えに対応しとるで：`model` プロパティが変わった時、
+ * 新しいモデルが完全に解析されるまで、前のモデルが表示されたままになるんや。
+ * カメラの状態（位置、ズーム、OrbitControlsのターゲット）はデフォルトで保持されるで。
+ * モデルが変わるたびにカメラをリセットしたい時は `preserveCamera={false}` にしたってな。
  */
 export function Lambda360View({
 	model,
@@ -136,65 +350,15 @@ export function Lambda360View({
 	showViewMenu = false,
 	footer,
 	annotations,
+	preserveCamera = true,
 }: Lambda360ViewProps) {
-	const cameraSetterRef = useRef<CameraHandle>(null);
 	const [showAxis, setShowAxis] = useState(true);
-	const [gltfScene, setGltfScene] = useState<THREE.Group | null>(null);
-	const [edgePositions, setEdgePositions] = useState<Float32Array | null>(null);
-
-	// Parse GLB ArrayBuffer
-	useEffect(() => {
-		const loader = new GLTFLoader();
-		loader.parse(
-			model,
-			'',
-			(gltf) => {
-				setGltfScene(gltf.scene);
-				const edgeAccessorIndex = gltf.userData?.edgeAccessor;
-				if (edgeAccessorIndex !== undefined) {
-					gltf.parser.getDependency('accessor', edgeAccessorIndex).then((attr: THREE.BufferAttribute) => {
-						setEdgePositions(attr.array as Float32Array);
-					});
-				} else {
-					setEdgePositions(null);
-				}
-			},
-			(error) => {
-				console.error('GLB parse error:', error);
-			}
-		);
-	}, [model]);
-
-	// Compute camera config from scene bounding box
-	const cameraConfig = useMemo(() => {
-		if (!gltfScene) return null;
-		const box = new THREE.Box3().setFromObject(gltfScene);
-		const size = box.getSize(new THREE.Vector3());
-		const maxSize = Math.max(size.x, size.y, size.z);
-		const distance = maxSize * 1.5;
-
-		return {
-			position: [distance, distance * 0.5, distance] as [number, number, number],
-			far: maxSize * 10,
-			near: 0.1,
-			zoom: 2,
-			distance,
-		};
-	}, [gltfScene]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [viewRequest, setViewRequest] = useState<{ type: ViewType; ts: number } | null>(null);
 
 	const handleViewChange = (view: ViewType) => {
-		if (!cameraConfig) return;
-		const distance = cameraConfig.distance;
-		const positions: Record<ViewType, [number, number, number]> = {
-			iso: [distance, distance, distance],
-			front: [0, 0, distance],
-			back: [0, 0, -distance],
-			top: [0, distance, 0],
-			bottom: [0, -distance, 0],
-			left: [-distance, 0, 0],
-			right: [distance, 0, 0],
-		};
-		cameraSetterRef.current?.setPosition(positions[view]);
+		// 同じビューでも再度クリックしたらカメラをリセットできるようにタイムスタンプ付きでリクエスト
+		setViewRequest({ type: view, ts: Date.now() });
 	};
 
 	const upAxisRotation = useMemo(() => getUpAxisRotation(upAxis), [upAxis]);
@@ -206,28 +370,25 @@ export function Lambda360View({
 		...style,
 	};
 
-	if (!gltfScene || !cameraConfig) {
-		return (
-			<div className={className} style={containerStyle}>
+	return (
+		<div className={className} style={containerStyle}>
+			{isLoading && (
 				<div style={{
-					width: '100%',
-					height: '100%',
+					position: 'absolute',
+					top: 0, left: 0, right: 0, bottom: 0,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					background: backgroundColor,
 					color: '#fff',
 					fontFamily: 'sans-serif',
+					zIndex: 20
 				}}>
 					Loading...
 				</div>
-			</div>
-		);
-	}
+			)}
 
-	return (
-		<div className={className} style={containerStyle}>
-			{showViewMenu && (
+			{!isLoading && showViewMenu && (
 				<ViewMenu
 					onViewChange={handleViewChange}
 					showAxisButton={true}
@@ -235,6 +396,7 @@ export function Lambda360View({
 					onToggleAxis={() => setShowAxis(!showAxis)}
 				/>
 			)}
+
 			<Canvas
 				gl={{
 					antialias: true,
@@ -242,50 +404,21 @@ export function Lambda360View({
 				}}
 				style={{ background: backgroundColor }}
 			>
-				{orthographic ? (
-					<OrthographicCamera
-						makeDefault
-						position={cameraConfig.position}
-						zoom={cameraConfig.zoom}
-						near={cameraConfig.near}
-						far={cameraConfig.far}
-					/>
-				) : (
-					<PerspectiveCamera
-						makeDefault
-						position={cameraConfig.position}
-						fov={50}
-						near={cameraConfig.near}
-						far={cameraConfig.far}
-					/>
-				)}
-
-				<CameraSetter ref={cameraSetterRef} />
-
-				<ambientLight intensity={0.6} />
-				<directionalLight position={[10, 10, 5]} intensity={0.8} />
-				<directionalLight position={[-10, -10, -5]} intensity={0.3} />
-
-				<group rotation={upAxisRotation}>
-					<GlbScene
-						scene={gltfScene}
-						edgeColor={edgeColor}
-						showEdges={showEdges}
-						edgePositions={edgePositions}
-					/>
-					{annotations && <Annotations annotations={annotations} />}
-					{showAxis && (
-						<axesHelper args={[cameraConfig.distance * 0.5]} />
-					)}
-				</group>
-
-				<OrbitControls
-					target={[0, 0, 0]}
-					enableDamping
-					dampingFactor={0.05}
+				<SceneManager
+					model={model}
+					preserveCamera={preserveCamera}
+					edgeColor={edgeColor}
+					showEdges={showEdges}
+					upAxisRotation={upAxisRotation}
+					annotations={annotations}
+					showAxis={showAxis}
+					viewRequest={viewRequest}
+					orthographic={orthographic}
+					onLoading={setIsLoading}
 				/>
 			</Canvas>
-			{footer && (
+
+			{!isLoading && footer && (
 				<div style={{
 					position: 'absolute',
 					bottom: 0,
