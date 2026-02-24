@@ -74,8 +74,7 @@ export default function Home() {
                 orthographic={true}
                 upAxis="Z"
                 showViewMenu={true}
-                width="100%"
-                height="100%"
+                style={{ width: '100%', height: '100%' }}
                 annotations={annotations}
                 footer={
                     <div style={{

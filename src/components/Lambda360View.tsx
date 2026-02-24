@@ -341,16 +341,13 @@ export function Lambda360View({
 	backgroundColor = '#1a1a2e',
 	edgeColor = '#000000',
 	showEdges = true,
-	width = '100%',
-	height = '100%',
-	className,
-	style,
 	upAxis = 'Y',
 	orthographic = false,
 	showViewMenu = false,
 	footer,
 	annotations,
 	preserveCamera = true,
+	...divProps
 }: Lambda360ViewProps) {
 	const [showAxis, setShowAxis] = useState(true);
 	const [isLoading, setIsLoading] = useState(true);
@@ -364,14 +361,14 @@ export function Lambda360View({
 	const upAxisRotation = useMemo(() => getUpAxisRotation(upAxis), [upAxis]);
 
 	const containerStyle: React.CSSProperties = {
-		width,
-		height,
+		width: '100%',
+		height: '100%',
 		position: 'relative',
-		...style,
+		...divProps.style,
 	};
 
 	return (
-		<div className={className} style={containerStyle}>
+		<div {...divProps} style={containerStyle}>
 			{isLoading && (
 				<div style={{
 					position: 'absolute',

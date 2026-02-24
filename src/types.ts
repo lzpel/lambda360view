@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * Type definitions for lambda360view GLB-based 3D viewer
  */
@@ -20,7 +22,7 @@ export interface DistanceAnnotation {
 export type Annotation = PointAnnotation | DistanceAnnotation;
 
 /** Props for Lambda360View component */
-export interface Lambda360ViewProps {
+export interface Lambda360ViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
     /** GLB binary data (ArrayBuffer) to load directly */
     model: ArrayBuffer;
     /** Background color (default: #1a1a2e) */
@@ -29,14 +31,7 @@ export interface Lambda360ViewProps {
     edgeColor?: string;
     /** Whether to show edges (default: true) */
     showEdges?: boolean;
-    /** Canvas width (default: 100%) */
-    width?: string | number;
-    /** Canvas height (default: 100%) */
-    height?: string | number;
-    /** Additional className for container */
-    className?: string;
-    /** Additional style for container */
-    style?: React.CSSProperties;
+
     /** Up axis direction: 'Y' (default), 'Z', or '-Y', '-Z' */
     upAxis?: 'Y' | 'Z' | '-Y' | '-Z';
     /** Use orthographic camera instead of perspective (default: false) */
