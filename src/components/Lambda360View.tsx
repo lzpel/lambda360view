@@ -116,7 +116,7 @@ function GlbScene({
 
 // ------ 新しい SceneManager の実装 ------
 interface SceneManagerProps {
-	model: ArrayBuffer;
+	model: ArrayBuffer | null;
 	preserveCamera: boolean;
 	edgeColor: string;
 	showEdges: boolean;
@@ -150,6 +150,18 @@ function SceneManager({
 	// モデル読み込みとシームレス切り替え
 	useEffect(() => {
 		let cancelled = false;
+
+		if (model === null) {
+			if (prevSceneRef.current) {
+				disposeScene(prevSceneRef.current);
+				prevSceneRef.current = null;
+			}
+			setDisplayScene(null);
+			setDisplayEdgePositions(null);
+			onLoading(false);
+			return;
+		}
+
 		const loader = new GLTFLoader();
 
 		// 前回のシーンが存在していて、preserveCamera が true ならカメラ状態を記憶
@@ -347,6 +359,7 @@ export function Lambda360View({
 	footer,
 	annotations,
 	preserveCamera = true,
+	center,
 	...divProps
 }: Lambda360ViewProps) {
 	const [showAxis, setShowAxis] = useState(true);
@@ -369,7 +382,7 @@ export function Lambda360View({
 
 	return (
 		<div {...divProps} style={containerStyle}>
-			{isLoading && (
+			{isLoading && !center && (
 				<div style={{
 					position: 'absolute',
 					top: 0, left: 0, right: 0, bottom: 0,
@@ -382,6 +395,22 @@ export function Lambda360View({
 					zIndex: 20
 				}}>
 					Loading...
+				</div>
+			)}
+
+			{center && (
+				<div style={{
+					position: 'absolute',
+					top: 0, left: 0, right: 0, bottom: 0,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					pointerEvents: 'none',
+					zIndex: 20
+				}}>
+					<div style={{ pointerEvents: 'auto' }}>
+						{center}
+					</div>
 				</div>
 			)}
 

@@ -1,9 +1,11 @@
 import React from 'react';
 const HIDDEN_DASH = '2 1.5';
 
-interface IconProps {
+export interface IconProps {
   size?: number;
 }
+
+export type IconComponent = React.FC<IconProps>;
 
 // 共通カラー定数
 const COLORS = {
@@ -19,7 +21,7 @@ const STROKE_WIDTH = 0.8;
 // --------------------
 // 既存: 座標軸
 // --------------------
-export function AxisIcon({ size = 24 }: IconProps) {
+export const AxisIcon: IconComponent = ({ size = 24 }) => {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {/* X軸 (赤) */}
@@ -30,12 +32,12 @@ export function AxisIcon({ size = 24 }: IconProps) {
       <line x1="12" y1="12" x2="12" y2="2" stroke={COLORS.axisZ} strokeWidth="2" />
     </svg>
   );
-}
+};
 
 // --------------------
 // 既存: アイソメトリック
 // --------------------
-export function CubeIsoIcon({ size = 24 }: IconProps) {
+export const CubeIsoIcon: IconComponent = ({ size = 24 }) => {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {/* 立方体のアウトライン */}
@@ -49,7 +51,7 @@ export function CubeIsoIcon({ size = 24 }: IconProps) {
       <circle cx="12" cy="12" r="6" fill={COLORS.fill} />
     </svg>
   );
-}
+};
 
 type CubeFace = 'front' | 'back' | 'top' | 'bottom' | 'left' | 'right';
 

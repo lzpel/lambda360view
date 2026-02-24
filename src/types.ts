@@ -23,8 +23,10 @@ export type Annotation = PointAnnotation | DistanceAnnotation;
 
 /** Props for Lambda360View component */
 export interface Lambda360ViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
-    /** GLB binary data (ArrayBuffer) to load directly */
-    model: ArrayBuffer;
+    /** GLB binary data (ArrayBuffer) to load directly, or null for empty state */
+    model: ArrayBuffer | null;
+    /** Arbitrary React node to display in the center (e.g. loading spinner, error message) */
+    center?: React.ReactNode;
     /** Background color (default: #1a1a2e) */
     backgroundColor?: string;
     /** Edge color (default: #000000) */

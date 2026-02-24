@@ -47,11 +47,10 @@ function App() {
       .then((buffer) => setModel(buffer));
   }, []);
 
-  if (!model) return <div>Loading...</div>;
-
   return (
     <Lambda360View
       model={model}
+      center={!model ? <div>Loading model...</div> : undefined}
       backgroundColor="#f0f0f0"
       edgeColor="#000000"
       showEdges={true}
@@ -66,11 +65,13 @@ function App() {
 
 ## Props
 
-`Lambda360View` inherits all standard `React.HTMLAttributes<HTMLDivElement>` props (such as `style`, `className`, `onClick`, etc.) and accepts the following specific props:
+`Lambda360View` inherits all standard `React.HTMLAttributes<HTMLDivElement>` props (such as `style`, `className`, `onClick`, etc.) and accepts the following specific props. 
+*(Note: Because the root element of this component is a `<div />`, any standard HTML attributes passed to `Lambda360View` will be applied directly to that root `div`.)*
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `model` | `ArrayBuffer` | required | GLB binary data to load directly |
+| `model` | `ArrayBuffer \| null` | required | GLB binary data to load directly, or `null` for empty state |
+| `center`| `React.ReactNode` | - | Arbitrary React node to display in the center (e.g. loading spinner, error message) |
 | `backgroundColor` | `string` | `"#1a1a2e"` | Canvas background color |
 | `edgeColor` | `string` | `"#000000"` | Color for edge lines |
 | `showEdges` | `boolean` | `true` | Whether to render edges |

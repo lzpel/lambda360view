@@ -8,7 +8,7 @@ import {
     CubeBottomIcon,
     CubeLeftIcon,
     CubeRightIcon,
-} from './ViewIcons';
+} from './Icon';
 
 export type ViewType = 'iso' | 'front' | 'back' | 'top' | 'bottom' | 'left' | 'right';
 
