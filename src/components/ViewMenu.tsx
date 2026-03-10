@@ -1,6 +1,7 @@
 import React from 'react';
 import {
     AxisIcon,
+    GridIcon,
     CubeIsoIcon,
     CubeFrontIcon,
     CubeBackIcon,
@@ -16,14 +17,20 @@ interface ViewMenuProps {
     onViewChange: (view: ViewType) => void;
     onToggleAxis?: () => void;
     showAxisButton?: boolean;
-    axisEnabled?: boolean;
+    showAxis?: boolean;
+    onToggleGrid?: () => void;
+    showGridButton?: boolean;
+    showGrid?: boolean;
 }
 
 export function ViewMenu({
     onViewChange,
     onToggleAxis,
     showAxisButton = true,
-    axisEnabled = true,
+    showAxis = true,
+    onToggleGrid,
+    showGridButton = true,
+    showGrid = true,
 }: ViewMenuProps) {
     const buttonStyle: React.CSSProperties = {
         display: 'flex',
@@ -81,13 +88,28 @@ export function ViewMenu({
             {showAxisButton && (
                 <>
                     <button
-                        style={axisEnabled ? activeButtonStyle : buttonStyle}
+                        style={showAxis ? activeButtonStyle : buttonStyle}
                         onClick={onToggleAxis}
                         onMouseEnter={handleMouseEnter}
-                        onMouseLeave={(e) => handleMouseLeave(e, axisEnabled)}
+                        onMouseLeave={(e) => handleMouseLeave(e, !!showAxis)}
                         title="Toggle Axis"
                     >
                         <AxisIcon size={20} />
+                    </button>
+                </>
+            )}
+
+            {/* グリッドトグル */}
+            {showGridButton && (
+                <>
+                    <button
+                        style={showGrid ? activeButtonStyle : buttonStyle}
+                        onClick={onToggleGrid}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={(e) => handleMouseLeave(e, !!showGrid)}
+                        title="Toggle Grid"
+                    >
+                        <GridIcon size={20} />
                     </button>
                     <div style={{ width: 1, backgroundColor: '#ddd', margin: '0 4px' }} />
                 </>

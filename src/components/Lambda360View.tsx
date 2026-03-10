@@ -8,6 +8,25 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Lambda360ViewProps, Annotation } from '../types';
 import { Annotations } from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
+import { Grid } from './Grid';
+
+/** バウンディングボックスの最大辺からカメラ設定を計算する */
+function calcCamera(maxSize: number): {
+	position: [number, number, number];
+	far: number;
+	near: number;
+	zoom: number;
+	distance: number;
+} {
+	const distance = maxSize * 1.5;
+	return {
+		position: [distance, distance * 0.5, distance],
+		far: maxSize * 10,
+		near: 0.1,
+		zoom: 2,
+		distance,
+	};
+}
 
 /**
  * モデルの上方向軸からThree.jsのY-upに変換する回転を取得するで
@@ -123,9 +142,9 @@ interface SceneManagerProps {
 	upAxisRotation: THREE.Euler;
 	annotations?: Annotation[];
 	showAxis: boolean;
+	showGrid: boolean;
 	viewRequest: { type: ViewType; ts: number } | null;
 	orthographic: boolean;
-	onLoading: (loading: boolean) => void;
 }
 
 function SceneManager({
@@ -136,9 +155,9 @@ function SceneManager({
 	upAxisRotation,
 	annotations,
 	showAxis,
+	showGrid,
 	viewRequest,
 	orthographic,
-	onLoading
 }: SceneManagerProps) {
 	const { camera, controls } = useThree();
 
@@ -158,7 +177,6 @@ function SceneManager({
 			}
 			setDisplayScene(null);
 			setDisplayEdgePositions(null);
-			onLoading(false);
 			return;
 		}
 
@@ -173,9 +191,6 @@ function SceneManager({
 				target: (controls as any)?.target?.clone() ?? new THREE.Vector3(0, 0, 0),
 			}
 			: null;
-
-		// 最初の読み込み時だけローディングを出す
-		if (!hasPrevScene) onLoading(true);
 
 		loader.parse(
 			model,
@@ -214,8 +229,6 @@ function SceneManager({
 							}
 						});
 					}
-
-					if (!hasPrevScene) onLoading(false);
 				};
 
 				if (edgeAccessorIndex !== undefined) {
@@ -228,7 +241,6 @@ function SceneManager({
 			},
 			(error) => {
 				console.error('GLB parse error:', error);
-				if (!hasPrevScene) onLoading(false);
 			}
 		);
 
@@ -254,14 +266,9 @@ function SceneManager({
 		const box = new THREE.Box3().setFromObject(displayScene);
 		const size = box.getSize(new THREE.Vector3());
 		const maxSize = Math.max(size.x, size.y, size.z);
-		const distance = maxSize * 1.5;
-
 		return {
-			position: [distance, distance * 0.5, distance] as [number, number, number],
-			far: maxSize * 10,
-			near: 0.1,
-			zoom: 2,
-			distance,
+			...calcCamera(maxSize),
+			maxSize,
 		};
 	}, [displayScene]);
 
@@ -328,6 +335,9 @@ function SceneManager({
 				{showAxis && (
 					<axesHelper args={[cameraConfig.distance * 0.5]} />
 				)}
+				{showGrid && (
+					<Grid maxSize={cameraConfig.maxSize} />
+				)}
 			</group>
 
 			<OrbitControls
@@ -359,11 +369,11 @@ export function Lambda360View({
 	footer,
 	annotations,
 	preserveCamera = true,
-	center,
+	centerNode,
 	...divProps
 }: Lambda360ViewProps) {
 	const [showAxis, setShowAxis] = useState(true);
-	const [isLoading, setIsLoading] = useState(true);
+	const [showGrid, setShowGrid] = useState(false);
 	const [viewRequest, setViewRequest] = useState<{ type: ViewType; ts: number } | null>(null);
 
 	const handleViewChange = (view: ViewType) => {
@@ -381,24 +391,10 @@ export function Lambda360View({
 	};
 
 	return (
+		// 全体を覆う div
 		<div {...divProps} style={containerStyle}>
-			{isLoading && !center && (
-				<div style={{
-					position: 'absolute',
-					top: 0, left: 0, right: 0, bottom: 0,
-					display: 'flex',
-					alignItems: 'center',
-					justifyContent: 'center',
-					background: backgroundColor,
-					color: '#fff',
-					fontFamily: 'sans-serif',
-					zIndex: 20
-				}}>
-					Loading...
-				</div>
-			)}
 
-			{center && (
+			{centerNode && (
 				<div style={{
 					position: 'absolute',
 					top: 0, left: 0, right: 0, bottom: 0,
@@ -409,17 +405,20 @@ export function Lambda360View({
 					zIndex: 20
 				}}>
 					<div style={{ pointerEvents: 'auto' }}>
-						{center}
+						{centerNode}
 					</div>
 				</div>
 			)}
 
-			{!isLoading && showViewMenu && (
+			{showViewMenu && (
 				<ViewMenu
 					onViewChange={handleViewChange}
 					showAxisButton={true}
-					axisEnabled={showAxis}
+					showAxis={showAxis}
 					onToggleAxis={() => setShowAxis(!showAxis)}
+					showGridButton={true}
+					showGrid={showGrid}
+					onToggleGrid={() => setShowGrid(!showGrid)}
 				/>
 			)}
 
@@ -438,13 +437,13 @@ export function Lambda360View({
 					upAxisRotation={upAxisRotation}
 					annotations={annotations}
 					showAxis={showAxis}
+					showGrid={showGrid}
 					viewRequest={viewRequest}
 					orthographic={orthographic}
-					onLoading={setIsLoading}
 				/>
 			</Canvas>
 
-			{!isLoading && footer && (
+			{footer && (
 				<div style={{
 					position: 'absolute',
 					bottom: 0,

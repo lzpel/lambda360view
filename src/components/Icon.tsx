@@ -35,6 +35,24 @@ export const AxisIcon: IconComponent = ({ size = 24 }) => {
 };
 
 // --------------------
+// グリッド
+// --------------------
+export const GridIcon: IconComponent = ({ size = 24 }) => {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* 横線 3本 */}
+      <line x1="3" y1="8" x2="21" y2="8" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      <line x1="3" y1="12" x2="21" y2="12" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      <line x1="3" y1="16" x2="21" y2="16" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      {/* 縦線 3本 */}
+      <line x1="8" y1="3" x2="8" y2="21" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      <line x1="12" y1="3" x2="12" y2="21" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+      <line x1="16" y1="3" x2="16" y2="21" stroke={COLORS.stroke} strokeWidth={STROKE_WIDTH} />
+    </svg>
+  );
+};
+
+// --------------------
 // 既存: アイソメトリック
 // --------------------
 export const CubeIsoIcon: IconComponent = ({ size = 24 }) => {

@@ -1,6 +1,6 @@
 {
     "name": "lambda360view",
-    "version": "0.1.12",
+    "version": "0.1.13",
     "description": "A 3D viewer library for CAD-like models with edge display",
     "main": "dist/index.js",
     "module": "dist/index.esm.js",
