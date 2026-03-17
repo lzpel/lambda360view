@@ -5,7 +5,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { Lambda360ViewProps, Annotation } from '../types';
+import type { Lambda360ViewProps, Annotation, AlignOption } from '../types';
 import { Annotations } from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
 import { Grid } from './Grid';
@@ -145,6 +145,7 @@ interface SceneManagerProps {
 	showGrid: boolean;
 	viewRequest: { type: ViewType; ts: number } | null;
 	orthographic: boolean;
+	align?: AlignOption[];
 }
 
 function SceneManager({
@@ -158,6 +159,7 @@ function SceneManager({
 	showGrid,
 	viewRequest,
 	orthographic,
+	align,
 }: SceneManagerProps) {
 	const { camera, controls } = useThree();
 
@@ -260,22 +262,34 @@ function SceneManager({
 		};
 	}, []);
 
-	// シーンのバウンディングボックスからカメラ設定と距離を計算するで
-	const cameraConfig = useMemo(() => {
+	// シーンのバウンディングボックスからカメラ設定・距離・alignオフセットを計算するで
+	const sceneSetup = useMemo(() => {
 		if (!displayScene) return null;
 		const box = new THREE.Box3().setFromObject(displayScene);
 		const size = box.getSize(new THREE.Vector3());
+		const center = box.getCenter(new THREE.Vector3());
 		const maxSize = Math.max(size.x, size.y, size.z);
+
+		// align: 同軸は後勝ち
+		const offset: Record<'x' | 'y' | 'z', number> = { x: 0, y: 0, z: 0 };
+		for (const option of (align ?? [])) {
+			const sep = option.lastIndexOf('-');
+			const axis = option.slice(0, sep) as 'x' | 'y' | 'z';
+			const mode = option.slice(sep + 1);
+			offset[axis] = mode === 'center' ? -center[axis] : -box.min[axis];
+		}
+
 		return {
 			...calcCamera(maxSize),
 			maxSize,
+			alignOffset: [offset.x, offset.y, offset.z] as [number, number, number],
 		};
-	}, [displayScene]);
+	}, [displayScene, align]);
 
 	// ビュー切り替えの処理や
 	useEffect(() => {
-		if (!viewRequest || !cameraConfig || !camera) return;
-		const distance = cameraConfig.distance;
+		if (!viewRequest || !sceneSetup || !camera) return;
+		const distance = sceneSetup.distance;
 		const positions: Record<ViewType, [number, number, number]> = {
 			iso: [distance, distance, distance],
 			front: [0, 0, distance],
@@ -296,27 +310,27 @@ function SceneManager({
 			orbitControls.target.set(0, 0, 0);
 			orbitControls.update?.();
 		}
-	}, [viewRequest, cameraConfig, camera, controls]);
+	}, [viewRequest, sceneSetup, camera, controls]);
 
-	if (!displayScene || !cameraConfig) return null;
+	if (!displayScene || !sceneSetup) return null;
 
 	return (
 		<>
 			{orthographic ? (
 				<OrthographicCamera
 					makeDefault
-					position={cameraConfig.position}
-					zoom={cameraConfig.zoom}
-					near={cameraConfig.near}
-					far={cameraConfig.far}
+					position={sceneSetup.position}
+					zoom={sceneSetup.zoom}
+					near={sceneSetup.near}
+					far={sceneSetup.far}
 				/>
 			) : (
 				<PerspectiveCamera
 					makeDefault
-					position={cameraConfig.position}
+					position={sceneSetup.position}
 					fov={50}
-					near={cameraConfig.near}
-					far={cameraConfig.far}
+					near={sceneSetup.near}
+					far={sceneSetup.far}
 				/>
 			)}
 
@@ -325,18 +339,20 @@ function SceneManager({
 			<directionalLight position={[-10, -10, -5]} intensity={0.3} />
 
 			<group rotation={upAxisRotation}>
-				<GlbScene
-					scene={displayScene}
-					edgeColor={edgeColor}
-					showEdges={showEdges}
-					edgePositions={displayEdgePositions}
-				/>
-				{annotations && <Annotations annotations={annotations} />}
+				<group position={sceneSetup.alignOffset}>
+					<GlbScene
+						scene={displayScene}
+						edgeColor={edgeColor}
+						showEdges={showEdges}
+						edgePositions={displayEdgePositions}
+					/>
+					{annotations && <Annotations annotations={annotations} />}
+				</group>
 				{showAxis && (
-					<axesHelper args={[cameraConfig.distance * 0.5]} />
+					<axesHelper args={[sceneSetup.distance * 0.5]} />
 				)}
 				{showGrid && (
-					<Grid maxSize={cameraConfig.maxSize} />
+					<Grid maxSize={sceneSetup.maxSize} />
 				)}
 			</group>
 
@@ -370,6 +386,7 @@ export function Lambda360View({
 	annotations,
 	preserveCamera = true,
 	centerNode,
+	align,
 	...divProps
 }: Lambda360ViewProps) {
 	const [showAxis, setShowAxis] = useState(true);
@@ -440,6 +457,7 @@ export function Lambda360View({
 					showGrid={showGrid}
 					viewRequest={viewRequest}
 					orthographic={orthographic}
+					align={align}
 				/>
 			</Canvas>
 

@@ -21,6 +21,11 @@ export interface DistanceAnnotation {
 
 export type Annotation = PointAnnotation | DistanceAnnotation;
 
+/** Alignment option for a single axis in world space */
+export type AlignOption =
+    | 'x-center' | 'y-center' | 'z-center'
+    | 'x-floor'  | 'y-floor'  | 'z-floor';
+
 /** Props for Lambda360View component */
 export interface Lambda360ViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
     /** GLB binary data (ArrayBuffer) to load directly, or null for empty state */
@@ -46,4 +51,7 @@ export interface Lambda360ViewProps extends Omit<React.HTMLAttributes<HTMLDivEle
     annotations?: Annotation[];
     /** Preserve camera position/zoom/OrbitControls state when model changes (default: true) */
     preserveCamera?: boolean;
+    /** Align model in world space per axis. Same-axis options last one wins.
+     *  e.g. ['x-center', 'z-center', 'y-floor'] */
+    align?: AlignOption[];
 }
