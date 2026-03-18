@@ -1,51 +1,51 @@
 {
-    "name": "lambda360view",
-    "version": "0.1.14",
-    "description": "A 3D viewer library for CAD-like models with edge display",
-    "main": "dist/index.js",
-    "module": "dist/index.esm.js",
-    "types": "dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
-    "scripts": {
-        "build": "rollup -c",
-        "dev": "rollup -c -w",
-        "prepublishOnly": "npm run build"
-    },
-    "dependencies": {
-        "@react-three/drei": "^10.7.7",
-        "@react-three/fiber": "^9.5.0",
-        "three": "^0.182.0"
-    },
-    "peerDependencies": {
-        "react": "^19",
-        "react-dom": "^19"
-    },
-    "devDependencies": {
-        "@rollup/plugin-commonjs": "^29.0.0",
-        "@rollup/plugin-node-resolve": "^15.0.0",
-        "@rollup/plugin-typescript": "^11.0.0",
-        "@types/react": "^19.0.0",
-        "@types/three": "^0.150.2",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0",
-        "rollup": "^4.0.0",
-        "rollup-plugin-dts": "^6.0.0",
-        "tslib": "^2.8.1",
-        "typescript": "^5.3.0"
-    },
-    "keywords": [
-        "3d",
-        "viewer",
-        "react",
-        "three.js",
-        "react-three-fiber",
-        "cad"
-    ],
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/lzpel/lambda360view"
-    }
+	"name": "lambda360view",
+	"version": "0.1.15",
+	"description": "A 3D viewer library for CAD-like models with edge display",
+	"main": "dist/index.js",
+	"module": "dist/index.esm.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "rollup -c",
+		"dev": "rollup -c -w",
+		"prepublishOnly": "npm run build"
+	},
+	"dependencies": {
+		"@react-three/drei": "^10.7.7",
+		"@react-three/fiber": "^9.5.0",
+		"three": "^0.182.0"
+	},
+	"peerDependencies": {
+		"react": "^19",
+		"react-dom": "^19"
+	},
+	"devDependencies": {
+		"@rollup/plugin-commonjs": "^29.0.0",
+		"@rollup/plugin-node-resolve": "^15.0.0",
+		"@rollup/plugin-typescript": "^11.0.0",
+		"@types/react": "^19.0.0",
+		"@types/three": "^0.150.2",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"rollup": "^4.0.0",
+		"rollup-plugin-dts": "^6.0.0",
+		"tslib": "^2.8.1",
+		"typescript": "^5.3.0"
+	},
+	"keywords": [
+		"3d",
+		"viewer",
+		"react",
+		"three.js",
+		"react-three-fiber",
+		"cad"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/lzpel/lambda360view"
+	}
 }
