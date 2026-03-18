@@ -266,6 +266,7 @@ export function Lambda360View({
 	axisCenter,
 	orthographic = false,
 	showViewMenu = false,
+	onDownloadStep,
 	nodeFooter,
 	annotations,
 	nodeCenter,
@@ -314,6 +315,7 @@ export function Lambda360View({
 					showGridButton={true}
 					showGrid={showGrid}
 					onToggleGrid={() => setShowGrid(!showGrid)}
+					onDownloadStep={onDownloadStep}
 				/>
 			)}
 
