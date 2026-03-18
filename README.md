@@ -56,7 +56,7 @@ function App() {
       showEdges={true}
       showViewMenu={true}
       orthographic={true}
-      upAxis="Z"
+      axisUp="Z"
       style={{ width: '100vw', height: '100vh' }}
     />
   );
@@ -71,16 +71,17 @@ function App() {
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `model` | `ArrayBuffer \| null` | required | GLB binary data to load directly, or `null` for empty state |
-| `center`| `React.ReactNode` | - | Arbitrary React node to display in the center (e.g. loading spinner, error message) |
+| `nodeCenter` | `React.ReactNode` | - | React node to display in the center (e.g. loading spinner, error message) |
+| `nodeFooter` | `React.ReactNode` | - | Footer content to display at the bottom |
 | `backgroundColor` | `string` | `"#1a1a2e"` | Canvas background color |
 | `edgeColor` | `string` | `"#000000"` | Color for edge lines |
 | `showEdges` | `boolean` | `true` | Whether to render edges |
-| `upAxis` | `'Y' \| 'Z' \| '-Y' \| '-Z'` | `'Y'` | Up axis direction of the model |
+| `axisUp` | `'Y' \| 'Z' \| 'X'` | `'Y'` | Up axis of the model coordinate system |
+| `axisGround` | `'X' \| 'Y' \| 'Z'` | - | Align model so that the bounding box minimum on this axis is at 0 |
+| `axisCenter` | `Axis[]` | - | Center the model on these axes (e.g. `['X', 'Z']`) |
 | `orthographic` | `boolean` | `false` | Use orthographic camera instead of perspective |
 | `showViewMenu` | `boolean` | `false` | Show built-in view control menu bar |
-| `footer` | `React.ReactNode` | - | Footer content to display at the bottom |
 | `annotations` | `Annotation[]` | - | Array of point/distance annotations to display |
-| `preserveCamera` | `boolean` | `true` | Preserve camera state (pos/zoom) when model changes |
 
 ### Annotations
 
