@@ -72,11 +72,11 @@ export default function Home() {
                 edgeColor="#000000"
                 showEdges={true}
                 orthographic={true}
-                upAxis="Z"
+                axisUp="Z"
                 showViewMenu={true}
                 style={{ width: '100%', height: '100%' }}
                 annotations={annotations}
-                footer={
+                nodeFooter={
                     <div style={{
                         display: 'flex',
                         justifyContent: 'space-between',

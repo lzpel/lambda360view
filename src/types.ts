@@ -4,6 +4,9 @@ import React from 'react';
  * Type definitions for lambda360view GLB-based 3D viewer
  */
 
+/** Axis identifier */
+export type Axis = 'X' | 'Y' | 'Z';
+
 /** Annotation attached to a single point */
 export interface PointAnnotation {
     type: 'point';
@@ -25,8 +28,10 @@ export type Annotation = PointAnnotation | DistanceAnnotation;
 export interface Lambda360ViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
     /** GLB binary data (ArrayBuffer) to load directly, or null for empty state */
     model: ArrayBuffer | null;
-    /** Arbitrary React node to display in the center (e.g. loading spinner, error message) */
-    centerNode?: React.ReactNode;
+    /** React node to display in the center (e.g. loading spinner, error message) */
+    nodeCenter?: React.ReactNode;
+    /** Footer content to display at the bottom of the viewer */
+    nodeFooter?: React.ReactNode;
     /** Background color (default: #1a1a2e) */
     backgroundColor?: string;
     /** Edge color (default: #000000) */
@@ -34,16 +39,17 @@ export interface Lambda360ViewProps extends Omit<React.HTMLAttributes<HTMLDivEle
     /** Whether to show edges (default: true) */
     showEdges?: boolean;
 
-    /** Up axis direction: 'Y' (default), 'Z', or '-Y', '-Z' */
-    upAxis?: 'Y' | 'Z' | '-Y' | '-Z';
+    /** Up axis of the model coordinate system (default: 'Y') */
+    axisUp?: Axis;
+    /** Align model so that the bounding box minimum on this axis is at 0 */
+    axisGround?: Axis;
+    /** Center the model on these axes */
+    axisCenter?: Axis[];
+
     /** Use orthographic camera instead of perspective (default: false) */
     orthographic?: boolean;
     /** Show view control menu bar (default: false) */
     showViewMenu?: boolean;
-    /** Footer content to display at the bottom of the viewer */
-    footer?: React.ReactNode;
     /** Annotations to display */
     annotations?: Annotation[];
-    /** Preserve camera position/zoom/OrbitControls state when model changes (default: true) */
-    preserveCamera?: boolean;
 }

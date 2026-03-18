@@ -1,48 +1,21 @@
 'use client';
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { Lambda360ViewProps, Annotation } from '../types';
+import type { Lambda360ViewProps, Annotation, Axis } from '../types';
 import { Annotations } from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
 import { Grid } from './Grid';
+import { OrbitSizeControls } from './OrbitSizeControls';
 
-/** バウンディングボックスの最大辺からカメラ設定を計算する */
-function calcCamera(maxSize: number): {
-	position: [number, number, number];
-	far: number;
-	near: number;
-	zoom: number;
-	distance: number;
-} {
-	const distance = maxSize * 1.5;
-	return {
-		position: [distance, distance * 0.5, distance],
-		far: maxSize * 10,
-		near: 0.1,
-		zoom: 2,
-		distance,
-	};
-}
-
-/**
- * モデルの上方向軸からThree.jsのY-upに変換する回転を取得するで
- */
-function getUpAxisRotation(upAxis: 'Y' | 'Z' | '-Y' | '-Z'): THREE.Euler {
-	switch (upAxis) {
-		case 'Y':
-			return new THREE.Euler(0, 0, 0);
-		case '-Y':
-			return new THREE.Euler(Math.PI, 0, 0);
-		case 'Z':
-			return new THREE.Euler(-Math.PI / 2, 0, 0);
-		case '-Z':
-			return new THREE.Euler(Math.PI / 2, 0, 0);
-		default:
-			return new THREE.Euler(0, 0, 0);
+/** モデルの上方向軸からThree.jsのY-upに変換する回転を取得する */
+function getUpAxisRotation(axisUp: Axis): THREE.Euler {
+	switch (axisUp) {
+		case 'Y': return new THREE.Euler(0, 0, 0);
+		case 'Z': return new THREE.Euler(-Math.PI / 2, 0, 0);
+		case 'X': return new THREE.Euler(0, 0, -Math.PI / 2);
 	}
 }
 
@@ -51,7 +24,6 @@ function disposeScene(scene: THREE.Group) {
 		if (child.geometry) {
 			child.geometry.dispose();
 		}
-
 		if (child.material) {
 			if (Array.isArray(child.material)) {
 				child.material.forEach((m: THREE.Material) => m.dispose());
@@ -62,10 +34,6 @@ function disposeScene(scene: THREE.Group) {
 	});
 }
 
-/**
- * エッジのオーバーレイと一緒にロードされたGLBシーンをレンダリングするコンポーネントや。
- * Canvasコンテキストの中で動くで。
- */
 function GlbScene({
 	scene,
 	edgeColor,
@@ -79,18 +47,11 @@ function GlbScene({
 }) {
 	const edgeLineRef = useRef<THREE.LineSegments | null>(null);
 
-	// 孤立したアクセサーデータからエッジのLineSegmentsを作るで
 	useEffect(() => {
 		if (!edgePositions) return;
 		const geometry = new THREE.BufferGeometry();
-		geometry.setAttribute(
-			'position',
-			new THREE.BufferAttribute(edgePositions, 3)
-		);
-		const material = new THREE.LineBasicMaterial({
-			color: edgeColor,
-			linewidth: 1,
-		});
+		geometry.setAttribute('position', new THREE.BufferAttribute(edgePositions, 3));
+		const material = new THREE.LineBasicMaterial({ color: edgeColor, linewidth: 1 });
 		const lineSegments = new THREE.LineSegments(geometry, material);
 		lineSegments.userData._isEdge = true;
 		scene.add(lineSegments);
@@ -104,21 +65,18 @@ function GlbScene({
 		};
 	}, [scene, edgePositions]);
 
-	// エッジの色を更新するで
 	useEffect(() => {
 		if (edgeLineRef.current) {
 			(edgeLineRef.current.material as THREE.LineBasicMaterial).color.set(edgeColor);
 		}
 	}, [edgeColor]);
 
-	// エッジの表示・非表示を切り替えるで
 	useEffect(() => {
 		if (edgeLineRef.current) {
 			edgeLineRef.current.visible = showEdges;
 		}
 	}, [showEdges]);
 
-	// エッジがちゃんと描画されるように、全てのメッシュのマテリアルにpolygonOffsetを適用するで
 	useEffect(() => {
 		scene.traverse((child) => {
 			if (child instanceof THREE.Mesh) {
@@ -133,13 +91,13 @@ function GlbScene({
 	return <primitive object={scene} />;
 }
 
-// ------ 新しい SceneManager の実装 ------
 interface SceneManagerProps {
 	model: ArrayBuffer | null;
-	preserveCamera: boolean;
 	edgeColor: string;
 	showEdges: boolean;
-	upAxisRotation: THREE.Euler;
+	axisUp: Axis;
+	axisGround?: Axis;
+	axisCenter?: Axis[];
 	annotations?: Annotation[];
 	showAxis: boolean;
 	showGrid: boolean;
@@ -149,18 +107,17 @@ interface SceneManagerProps {
 
 function SceneManager({
 	model,
-	preserveCamera,
 	edgeColor,
 	showEdges,
-	upAxisRotation,
+	axisUp,
+	axisGround,
+	axisCenter,
 	annotations,
 	showAxis,
 	showGrid,
 	viewRequest,
 	orthographic,
 }: SceneManagerProps) {
-	const { camera, controls } = useThree();
-
 	const [displayScene, setDisplayScene] = useState<THREE.Group | null>(null);
 	const [displayEdgePositions, setDisplayEdgePositions] = useState<Float32Array | null>(null);
 
@@ -182,16 +139,6 @@ function SceneManager({
 
 		const loader = new GLTFLoader();
 
-		// 前回のシーンが存在していて、preserveCamera が true ならカメラ状態を記憶
-		const hasPrevScene = prevSceneRef.current !== null;
-		const savedCameraState = hasPrevScene && preserveCamera
-			? {
-				position: camera.position.clone(),
-				zoom: (camera as any).zoom ?? 1,
-				target: (controls as any)?.target?.clone() ?? new THREE.Vector3(0, 0, 0),
-			}
-			: null;
-
 		loader.parse(
 			model,
 			'',
@@ -204,7 +151,6 @@ function SceneManager({
 				const finalize = (edges: Float32Array | null) => {
 					if (cancelled) return;
 
-					// 前のシーンのリソースをお片付けするで
 					if (prevSceneRef.current) {
 						disposeScene(prevSceneRef.current);
 					}
@@ -212,23 +158,6 @@ function SceneManager({
 					prevSceneRef.current = newScene;
 					setDisplayScene(newScene);
 					setDisplayEdgePositions(edges);
-
-					// スワップした後にカメラの状態を元に戻すで
-					if (savedCameraState) {
-						// 完全にレンダリングされてからカメラを復元する
-						requestAnimationFrame(() => {
-							if (!cancelled) {
-								camera.position.copy(savedCameraState.position);
-								(camera as any).zoom = savedCameraState.zoom;
-								camera.updateProjectionMatrix();
-								const orbitControls = controls as any;
-								if (orbitControls?.target) {
-									orbitControls.target.copy(savedCameraState.target);
-									orbitControls.update?.();
-								}
-							}
-						});
-					}
 				};
 
 				if (edgeAccessorIndex !== undefined) {
@@ -248,9 +177,9 @@ function SceneManager({
 			cancelled = true;
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [model]); // モデル本体が変わった時だけ発火させる
+	}, [model]);
 
-	// アンマウント時のお片付けや
+	// アンマウント時のお片付け
 	useEffect(() => {
 		return () => {
 			if (prevSceneRef.current) {
@@ -260,92 +189,62 @@ function SceneManager({
 		};
 	}, []);
 
-	// シーンのバウンディングボックスからカメラ設定と距離を計算するで
-	const cameraConfig = useMemo(() => {
+	const maxSize = useMemo(() => {
 		if (!displayScene) return null;
 		const box = new THREE.Box3().setFromObject(displayScene);
 		const size = box.getSize(new THREE.Vector3());
-		const maxSize = Math.max(size.x, size.y, size.z);
-		return {
-			...calcCamera(maxSize),
-			maxSize,
-		};
+		return Math.max(size.x, size.y, size.z);
 	}, [displayScene]);
 
-	// ビュー切り替えの処理や
-	useEffect(() => {
-		if (!viewRequest || !cameraConfig || !camera) return;
-		const distance = cameraConfig.distance;
-		const positions: Record<ViewType, [number, number, number]> = {
-			iso: [distance, distance, distance],
-			front: [0, 0, distance],
-			back: [0, 0, -distance],
-			top: [0, distance, 0],
-			bottom: [0, -distance, 0],
-			left: [-distance, 0, 0],
-			right: [distance, 0, 0],
-		};
+	// axisGround / axisCenter によるモデルオフセットをモデル空間で計算する
+	const modelOffset = useMemo((): [number, number, number] => {
+		if (!displayScene || (!axisGround && !axisCenter?.length)) return [0, 0, 0];
+		const box = new THREE.Box3().setFromObject(displayScene);
+		const center = box.getCenter(new THREE.Vector3());
+		let ox = 0, oy = 0, oz = 0;
 
-		const pos = positions[viewRequest.type];
-		camera.position.set(pos[0], pos[1], pos[2]);
-		camera.lookAt(0, 0, 0);
-		camera.updateProjectionMatrix();
-
-		const orbitControls = controls as any;
-		if (orbitControls?.target) {
-			orbitControls.target.set(0, 0, 0);
-			orbitControls.update?.();
+		if (axisCenter) {
+			if (axisCenter.includes('X')) ox = -center.x;
+			if (axisCenter.includes('Y')) oy = -center.y;
+			if (axisCenter.includes('Z')) oz = -center.z;
 		}
-	}, [viewRequest, cameraConfig, camera, controls]);
 
-	if (!displayScene || !cameraConfig) return null;
+		if (axisGround === 'X') ox = -box.min.x;
+		if (axisGround === 'Y') oy = -box.min.y;
+		if (axisGround === 'Z') oz = -box.min.z;
+
+		return [ox, oy, oz];
+	}, [displayScene, axisGround, axisCenter]);
+
+	const upAxisRotation = useMemo(() => getUpAxisRotation(axisUp), [axisUp]);
+
+	if (!displayScene || !maxSize) return null;
 
 	return (
 		<>
-			{orthographic ? (
-				<OrthographicCamera
-					makeDefault
-					position={cameraConfig.position}
-					zoom={cameraConfig.zoom}
-					near={cameraConfig.near}
-					far={cameraConfig.far}
-				/>
-			) : (
-				<PerspectiveCamera
-					makeDefault
-					position={cameraConfig.position}
-					fov={50}
-					near={cameraConfig.near}
-					far={cameraConfig.far}
-				/>
-			)}
+			<OrbitSizeControls maxSize={maxSize} orthographic={orthographic} viewRequest={viewRequest} />
 
 			<ambientLight intensity={0.6} />
 			<directionalLight position={[10, 10, 5]} intensity={0.8} />
 			<directionalLight position={[-10, -10, -5]} intensity={0.3} />
 
 			<group rotation={upAxisRotation}>
-				<GlbScene
-					scene={displayScene}
-					edgeColor={edgeColor}
-					showEdges={showEdges}
-					edgePositions={displayEdgePositions}
-				/>
-				{annotations && <Annotations annotations={annotations} />}
+				<group position={modelOffset}>
+					<GlbScene
+						scene={displayScene}
+						edgeColor={edgeColor}
+						showEdges={showEdges}
+						edgePositions={displayEdgePositions}
+					/>
+					{annotations && <Annotations annotations={annotations} />}
+				</group>
 				{showAxis && (
-					<axesHelper args={[cameraConfig.distance * 0.5]} />
+					<axesHelper args={[maxSize * 0.75]} />
 				)}
 				{showGrid && (
-					<Grid maxSize={cameraConfig.maxSize} />
+					<Grid maxSize={maxSize} />
 				)}
 			</group>
-
-			<OrbitControls
-				makeDefault
-				target={[0, 0, 0]}
-				enableDamping
-				dampingFactor={0.05}
-			/>
 		</>
 	);
 }
@@ -355,21 +254,21 @@ function SceneManager({
  *
  * シームレスなモデルの切り替えに対応しとるで：`model` プロパティが変わった時、
  * 新しいモデルが完全に解析されるまで、前のモデルが表示されたままになるんや。
- * カメラの状態（位置、ズーム、OrbitControlsのターゲット）はデフォルトで保持されるで。
- * モデルが変わるたびにカメラをリセットしたい時は `preserveCamera={false}` にしたってな。
+ * カメラの状態（位置、ズーム、OrbitControlsのターゲット）はモデル切り替え時に維持されるで。
  */
 export function Lambda360View({
 	model,
 	backgroundColor = '#1a1a2e',
 	edgeColor = '#000000',
 	showEdges = true,
-	upAxis = 'Y',
+	axisUp = 'Y',
+	axisGround,
+	axisCenter,
 	orthographic = false,
 	showViewMenu = false,
-	footer,
+	nodeFooter,
 	annotations,
-	preserveCamera = true,
-	centerNode,
+	nodeCenter,
 	...divProps
 }: Lambda360ViewProps) {
 	const [showAxis, setShowAxis] = useState(true);
@@ -377,11 +276,8 @@ export function Lambda360View({
 	const [viewRequest, setViewRequest] = useState<{ type: ViewType; ts: number } | null>(null);
 
 	const handleViewChange = (view: ViewType) => {
-		// 同じビューでも再度クリックしたらカメラをリセットできるようにタイムスタンプ付きでリクエスト
 		setViewRequest({ type: view, ts: Date.now() });
 	};
-
-	const upAxisRotation = useMemo(() => getUpAxisRotation(upAxis), [upAxis]);
 
 	const containerStyle: React.CSSProperties = {
 		width: '100%',
@@ -391,10 +287,9 @@ export function Lambda360View({
 	};
 
 	return (
-		// 全体を覆う div
 		<div {...divProps} style={containerStyle}>
 
-			{centerNode && (
+			{nodeCenter && (
 				<div style={{
 					position: 'absolute',
 					top: 0, left: 0, right: 0, bottom: 0,
@@ -405,7 +300,7 @@ export function Lambda360View({
 					zIndex: 20
 				}}>
 					<div style={{ pointerEvents: 'auto' }}>
-						{centerNode}
+						{nodeCenter}
 					</div>
 				</div>
 			)}
@@ -431,10 +326,11 @@ export function Lambda360View({
 			>
 				<SceneManager
 					model={model}
-					preserveCamera={preserveCamera}
 					edgeColor={edgeColor}
 					showEdges={showEdges}
-					upAxisRotation={upAxisRotation}
+					axisUp={axisUp}
+					axisGround={axisGround}
+					axisCenter={axisCenter}
 					annotations={annotations}
 					showAxis={showAxis}
 					showGrid={showGrid}
@@ -443,7 +339,7 @@ export function Lambda360View({
 				/>
 			</Canvas>
 
-			{footer && (
+			{nodeFooter && (
 				<div style={{
 					position: 'absolute',
 					bottom: 0,
@@ -452,7 +348,7 @@ export function Lambda360View({
 					pointerEvents: 'none',
 					zIndex: 10
 				}}>
-					{footer}
+					{nodeFooter}
 				</div>
 			)}
 		</div>

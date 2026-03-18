@@ -174,3 +174,61 @@ export function CubeTopIcon(props: IconProps) { return <CubeViewIcon {...props} 
 export function CubeBottomIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="bottom" />; }
 export function CubeLeftIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="left" />; }
 export function CubeRightIcon(props: IconProps) { return <CubeViewIcon {...props} highlightFace="right" />; }
+
+// --------------------
+// STEPダウンロード
+// --------------------
+export const StepDownloadIcon: IconComponent = ({ size = 24 }) => {
+  const ink = '#1e2d6e';
+  const green = '#c8f5c0';
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* 影（右下オフセット） */}
+      <path
+        d="M5 3 L14.5 3 L20 8.5 L20 22 L5 22 Z"
+        fill={green}
+        opacity={0.55}
+      />
+      {/* ドキュメント本体 */}
+      <path
+        d="M3 1 L13 1 L19 7 L19 21 L3 21 Z"
+        fill={green}
+        stroke={ink}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      {/* 折り返しコーナー */}
+      <path
+        d="M13 1 L13 7 L19 7"
+        stroke={ink}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      {/* STEP テキスト */}
+      <text
+        x="11"
+        y="13.5"
+        textAnchor="middle"
+        fontSize="4.5"
+        fontWeight="bold"
+        fill={ink}
+        fontFamily="Arial, sans-serif"
+        letterSpacing="0.3"
+      >
+        STEP
+      </text>
+      {/* ダウンロード矢印: 軸 */}
+      <line x1="11" y1="15" x2="11" y2="18.5" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+      {/* 矢印ヘッド（シェブロン） */}
+      <polyline
+        points="8.5,17 11,20 13.5,17"
+        stroke={ink}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* ベースライン */}
+      <line x1="8" y1="20.5" x2="14" y2="20.5" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+};
