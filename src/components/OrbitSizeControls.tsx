@@ -29,43 +29,43 @@ export function OrbitSizeControls({ maxSize, orthographic, viewRequest }: OrbitS
 	const prevCameraRef = useRef<THREE.Camera | null>(null);
 
 	useEffect(() => {
-		if (!controls) return;
+		if (controls) {
+			const distance = maxSize * 1.5;
+			const isNewCamera = camera !== prevCameraRef.current;
+			prevCameraRef.current = camera;
+			if (isNewCamera) {
+				camera.position.set(distance, distance * 0.5, distance);
+				if (orthographic) (camera as THREE.OrthographicCamera).zoom = 2;
+			} else {
+				const len =
+					camera.position.length();
+				if (len > 0) camera.position.multiplyScalar(distance / len);
+			}
 
-		const distance = maxSize * 1.5;
-		const isNewCamera = camera !== prevCameraRef.current;
-		prevCameraRef.current = camera;
-
-		if (isNewCamera) {
-			camera.position.set(distance, distance * 0.5, distance);
-			if (orthographic) (camera as THREE.OrthographicCamera).zoom = 2;
-		} else {
-			const len = camera.position.length();
-			if (len > 0) camera.position.multiplyScalar(distance / len);
+			camera.near = 0.1;
+			camera.far = maxSize * 10;
+			camera.updateProjectionMatrix();
 		}
-
-		camera.near = 0.1;
-		camera.far = maxSize * 10;
-		camera.updateProjectionMatrix();
 	}, [maxSize, controls, camera, orthographic]);
-
+	// 指定した方向に向ける。これらのpropsは子に渡らないため再描画は無いはず
 	useEffect(() => {
-		if (!viewRequest || !controls) return;
-
-		const distance = maxSize * 1.5;
-		const positions: Record<ViewType, [number, number, number]> = {
-			iso:    [ distance,  distance,  distance],
-			front:  [0,          0,          distance],
-			back:   [0,          0,         -distance],
-			top:    [0,          distance,   0],
-			bottom: [0,         -distance,   0],
-			left:   [-distance,  0,          0],
-			right:  [ distance,  0,          0],
+		if (viewRequest && controls) {
+			const distance = maxSize * 1.5;
+			const positions: Record<ViewType, [number, number, number]> = {
+				iso: [distance, distance, distance],
+				front: [0, 0, distance],
+				back: [0, 0, -distance],
+				top: [0, distance, 0],
+				bottom: [0, -distance, 0],
+				left: [-distance, 0, 0],
+				right: [distance, 0, 0],
+			};
+			const pos = positions[viewRequest.type];
+			camera.position.set(pos[0], pos[1], pos[2]);
+			camera.lookAt(0, 0, 0);
+			camera.updateProjectionMatrix();
 		};
 
-		const pos = positions[viewRequest.type];
-		camera.position.set(pos[0], pos[1], pos[2]);
-		camera.lookAt(0, 0, 0);
-		camera.updateProjectionMatrix();
 	}, [viewRequest, maxSize, controls, camera]);
 
 	return (

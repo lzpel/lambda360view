@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import './globals.css';
+import { CSSProperties } from 'react';
 
 export const metadata: Metadata = {
     title: 'Lambda360View Demo',
@@ -11,9 +11,13 @@ export default function RootLayout({
 }: {
     children: React.ReactNode;
 }) {
+    const full: CSSProperties = {
+        width: '100%',
+        height: '100%',
+    }
     return (
-        <html lang="ja">
-            <body>{children}</body>
+        <html lang="ja" style={full}>
+            <body style={full}>{children}</body>
         </html>
     );
 }

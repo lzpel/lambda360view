@@ -5,7 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Lambda360ViewProps, Annotation, Axis } from '../types';
-import { Annotations } from './Annotations';
+import Annotations from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
 import { Grid } from './Grid';
 import { OrbitSizeControls } from './OrbitSizeControls';
@@ -256,9 +256,9 @@ function SceneManager({
  * 新しいモデルが完全に解析されるまで、前のモデルが表示されたままになるんや。
  * カメラの状態（位置、ズーム、OrbitControlsのターゲット）はモデル切り替え時に維持されるで。
  */
-export function Lambda360View({
+export default function Lambda360View({
 	model,
-	backgroundColor = '#1a1a2e',
+	backgroundColor = 'transparent',
 	edgeColor = '#000000',
 	showEdges = true,
 	axisUp = 'Y',
@@ -289,7 +289,7 @@ export function Lambda360View({
 
 	return (
 		<div {...divProps} style={containerStyle}>
-
+			{/* nodeCenter */}
 			{nodeCenter && (
 				<div style={{
 					position: 'absolute',
@@ -305,7 +305,7 @@ export function Lambda360View({
 					</div>
 				</div>
 			)}
-
+			{/* Menu */}
 			{showViewMenu && (
 				<ViewMenu
 					onViewChange={handleViewChange}
@@ -318,7 +318,7 @@ export function Lambda360View({
 					onDownloadStep={onDownloadStep}
 				/>
 			)}
-
+			{/* Canvas */}
 			<Canvas
 				gl={{
 					antialias: true,
@@ -340,7 +340,7 @@ export function Lambda360View({
 					orthographic={orthographic}
 				/>
 			</Canvas>
-
+			{/* nodeFooter */}
 			{nodeFooter && (
 				<div style={{
 					position: 'absolute',

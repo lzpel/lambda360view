@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Lambda360View } from 'lambda360view';
-import type { Annotation } from 'lambda360view';
+import Lambda360View from '@main/index';
+import type { Annotation } from '@main/types';
 
 export default function Home() {
 	const [model, setModel] = useState<ArrayBuffer | null>(null);
@@ -65,32 +65,30 @@ export default function Home() {
 	}
 
 	return (
-		<main style={{ width: '100vw', height: '100vh' }}>
-			<Lambda360View
-				model={model}
-				backgroundColor="#f0f0f0"
-				edgeColor="#000000"
-				showEdges={true}
-				orthographic={true}
-				axisUp="Z"
-				showViewMenu={true}
-				onDownloadStep={() => alert('Download STEP')}
-				style={{ width: '100%', height: '100%' }}
-				annotations={annotations}
-				nodeFooter={
-					<div style={{
-						display: 'flex',
-						justifyContent: 'space-between',
-						padding: '10px',
-						color: '#666',
-						fontSize: '12px',
-						fontFamily: 'sans-serif'
-					}}>
-						<span>lambda360view</span>
-						<span>powered by Surfic LLC</span>
-					</div>
-				}
-			/>
-		</main>
+		<Lambda360View
+			model={model}
+			edgeColor="#000000"
+			showEdges={true}
+			orthographic={true}
+			axisUp="Z"
+			axisCenter={["X", "Y"]}
+			showViewMenu={true}
+			onDownloadStep={() => alert('Download STEP')}
+			style={{ width: '100%', height: '100%' }}
+			annotations={annotations}
+			nodeFooter={
+				<div style={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					padding: '10px',
+					color: '#666',
+					fontSize: '12px',
+					fontFamily: 'sans-serif'
+				}}>
+					<span>lambda360view</span>
+					<span>powered by Surfic LLC</span>
+				</div>
+			}
+		/>
 	);
 }

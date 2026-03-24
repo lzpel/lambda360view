@@ -6,7 +6,7 @@ const nextConfig = {
 	env: {
 		NEXT_PUBLIC_PREFIX: process.env.NEXT_PUBLIC_REPO ? `/${process.env.NEXT_PUBLIC_REPO}` : "",
 	},
-	transpilePackages: ['lambda360view', 'three'],
+	transpilePackages: ['three'],
 	webpack: (config) => {
 		config.externals = config.externals || [];
 		return config;

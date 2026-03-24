@@ -4,18 +4,7 @@ import * as THREE from 'three';
 import { Annotation, PointAnnotation, DistanceAnnotation } from '../types';
 import { Label } from './Label';
 
-const labelStylePoint: React.CSSProperties = {
-    fontFamily: 'sans-serif',
-    fontSize: '12px',
-    background: 'rgba(255, 255, 255, 0.9)',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    border: '1px solid #333',
-    whiteSpace: 'nowrap',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-};
-
-const labelStyleDistance: React.CSSProperties = {
+const labelStyle: React.CSSProperties = {
     fontFamily: 'sans-serif',
     fontSize: '12px',
     background: 'rgba(255, 255, 255, 0.9)',
@@ -25,6 +14,7 @@ const labelStyleDistance: React.CSSProperties = {
     whiteSpace: 'nowrap',
     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
 };
+const defaultCameraPosition = [326.7245485929828, 163.36227429649136, 326.72454859298284];
 
 const PointAnnotationRenderer = ({ annotation }: { annotation: PointAnnotation }) => {
     const { position, label } = annotation;
@@ -50,7 +40,7 @@ const PointAnnotationRenderer = ({ annotation }: { annotation: PointAnnotation }
                 lineWidth={1}
             />
 
-            <Label position={endPosition} text={label} style={labelStylePoint} />
+            <Label position={endPosition} text={label} style={labelStyle} />
         </group>
     );
 };
@@ -61,23 +51,28 @@ const DistanceAnnotationRenderer = ({ annotation }: { annotation: DistanceAnnota
     const endVec = useMemo(() => new THREE.Vector3(...end), [end]);
     const midPoint = useMemo(() => startVec.clone().add(endVec).multiplyScalar(0.5), [startVec, endVec]);
     const direction = useMemo(() => endVec.clone().sub(startVec).normalize(), [startVec, endVec]);
-    const length = useMemo(() => startVec.distanceTo(endVec), [startVec, endVec]);
-
+    // カメラ位置、いずれ取得する
+    const defaultCameraPositionVec = useMemo(() => new THREE.Vector3(...defaultCameraPosition), [defaultCameraPosition]);
+    // 矢印の大きさ
+    const arrowSize = 10;
     // 矢印の回転を計算するで
-    const quaternion = useMemo(() => {
-        const dummy = new THREE.Object3D();
-        // デフォルトのlookAtは+zやで
-        // コーンジオメトリのデフォルトの向きは上(+y)か？いや、たぶん+yやな。
-        // コーンを線に沿わせる必要があるんや。
-        // LookAtが賢くやってくれるのを信じよか。
-        return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-    }, [direction]);
+    const horizontal = new THREE.Vector3().crossVectors(direction, midPoint.sub(defaultCameraPositionVec)).normalize();
+    const arrow = [
+        startVec,
+        startVec.clone().add(new THREE.Vector3((direction.x + horizontal.x / 2) * arrowSize, (direction.y + horizontal.y / 2) * arrowSize, (direction.z + horizontal.z / 2) * arrowSize)),
+        startVec.clone().add(new THREE.Vector3((direction.x - horizontal.x / 2) * arrowSize, (direction.y - horizontal.y / 2) * arrowSize, (direction.z - horizontal.z / 2) * arrowSize)),
+        startVec,
+        endVec,
+        endVec.clone().add(new THREE.Vector3((-direction.x + horizontal.x / 2) * arrowSize, (-direction.y + horizontal.y / 2) * arrowSize, (-direction.z + horizontal.z / 2) * arrowSize)),
+        endVec.clone().add(new THREE.Vector3((-direction.x - horizontal.x / 2) * arrowSize, (-direction.y - horizontal.y / 2) * arrowSize, (-direction.z - horizontal.z / 2) * arrowSize)),
+        endVec,
+    ]
 
     return (
         <group>
             {/* メインの線や */}
             <Line
-                points={[start, end]}
+                points={arrow}
                 color="black"
                 lineWidth={1}
             />
@@ -96,12 +91,12 @@ const DistanceAnnotationRenderer = ({ annotation }: { annotation: DistanceAnnota
                 <meshBasicMaterial color="black" />
             </mesh>
 
-            <Label position={midPoint.toArray() as [number, number, number]} text={label} style={labelStyleDistance} />
+            <Label position={midPoint.toArray() as [number, number, number]} text={label} style={labelStyle} />
         </group>
     );
 };
 
-export const Annotations = ({ annotations }: { annotations: Annotation[] }) => {
+export default function Annotations({ annotations }: { annotations: Annotation[] }) {
     return (
         <group>
             {annotations.map((ann, i) => {

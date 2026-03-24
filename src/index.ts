@@ -1,4 +1,5 @@
-export { Lambda360View } from './components/Lambda360View';
+import Lambda360View from './components/Lambda360View';
+export default Lambda360View;
 export { ViewMenu } from './components/ViewMenu';
 export type { ViewType } from './components/ViewMenu';
 export type {
