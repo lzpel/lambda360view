@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { Line } from '@react-three/drei';
 import * as THREE from 'three';
+import { useThree, useFrame } from '@react-three/fiber';
 import { Annotation, PointAnnotation, DistanceAnnotation } from '../types';
 import { Label } from './Label';
 
@@ -14,85 +15,70 @@ const labelStyle: React.CSSProperties = {
     whiteSpace: 'nowrap',
     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
 };
-const defaultCameraPosition = [326.7245485929828, 163.36227429649136, 326.72454859298284];
 
-const PointAnnotationRenderer = ({ annotation }: { annotation: PointAnnotation }) => {
-    const { position, label } = annotation;
-
-    // ラベルのオフセットで引き出し線を可視化するんやで
-    // 実際のCADアプリやったら、これは視点に依存するか手動で配置されるかもしれんな。
-    // ここではシンプルにするために固定の垂直オフセットを使うで。
-    const offsetHeight = 50;
-    const endPosition: [number, number, number] = [position[0], position[1] + offsetHeight, position[2]];
-
-    return (
-        <group>
-            {/* ポイントのマーカーや */}
-            <mesh position={position}>
-                <sphereGeometry args={[2]} />
-                <meshBasicMaterial color="#ff0000" />
-            </mesh>
-
-            {/* 引き出し線やで */}
-            <Line
-                points={[position, endPosition]}
-                color="black"
-                lineWidth={1}
-            />
-
-            <Label position={endPosition} text={label} style={labelStyle} />
-        </group>
-    );
-};
-
-const DistanceAnnotationRenderer = ({ annotation }: { annotation: DistanceAnnotation }) => {
-    const { start, end, label } = annotation;
-    const startVec = useMemo(() => new THREE.Vector3(...start), [start]);
-    const endVec = useMemo(() => new THREE.Vector3(...end), [end]);
-    const midPoint = useMemo(() => startVec.clone().add(endVec).multiplyScalar(0.5), [startVec, endVec]);
+function Arrow(props: { start: number[], end: number[], both: boolean, size?: number }) {
+    const arrowSize = props.size ?? 10;
+    // カメラ位置をローカル空間に変換して毎フレーム追跡するで
+    const { camera } = useThree();
+    const groupRef = useRef<THREE.Group>(null);
+    const [cameraLocalPos, setCameraLocalPos] = useState(() => camera.position.clone());
+    useFrame(() => {
+        if (groupRef.current) {
+            const localCam = groupRef.current.worldToLocal(camera.position.clone());
+            //useFrame は毎フレーム（60fps）走るから、if がないと setCameraPosが毎フレーム呼ばれてReactの再レンダリングが毎フレーム走ってしまう
+            if (localCam.distanceToSquared(cameraLocalPos) > 0.01) setCameraLocalPos(localCam);
+        }
+    });
+    //計算
+    const startVec = useMemo(() => new THREE.Vector3(...props.start), [props.start]);
+    const endVec = useMemo(() => new THREE.Vector3(...props.end), [props.end]);
+    const center = useMemo(() => startVec.clone().add(endVec).multiplyScalar(0.5), [startVec, endVec]);
     const direction = useMemo(() => endVec.clone().sub(startVec).normalize(), [startVec, endVec]);
-    // カメラ位置、いずれ取得する
-    const defaultCameraPositionVec = useMemo(() => new THREE.Vector3(...defaultCameraPosition), [defaultCameraPosition]);
-    // 矢印の大きさ
-    const arrowSize = 10;
-    // 矢印の回転を計算するで
-    const horizontal = new THREE.Vector3().crossVectors(direction, midPoint.sub(defaultCameraPositionVec)).normalize();
-    const arrow = [
-        startVec,
-        startVec.clone().add(new THREE.Vector3((direction.x + horizontal.x / 2) * arrowSize, (direction.y + horizontal.y / 2) * arrowSize, (direction.z + horizontal.z / 2) * arrowSize)),
-        startVec.clone().add(new THREE.Vector3((direction.x - horizontal.x / 2) * arrowSize, (direction.y - horizontal.y / 2) * arrowSize, (direction.z - horizontal.z / 2) * arrowSize)),
-        startVec,
+    const horizontal = useMemo(() => new THREE.Vector3().crossVectors(direction, center.clone().sub(cameraLocalPos)).normalize(), [direction, center, cameraLocalPos]);
+    const arrow = useMemo(() => [
         endVec,
         endVec.clone().add(new THREE.Vector3((-direction.x + horizontal.x / 2) * arrowSize, (-direction.y + horizontal.y / 2) * arrowSize, (-direction.z + horizontal.z / 2) * arrowSize)),
         endVec.clone().add(new THREE.Vector3((-direction.x - horizontal.x / 2) * arrowSize, (-direction.y - horizontal.y / 2) * arrowSize, (-direction.z - horizontal.z / 2) * arrowSize)),
         endVec,
-    ]
+        startVec,
+        startVec.clone().add(new THREE.Vector3((direction.x + horizontal.x / 2) * arrowSize, (direction.y + horizontal.y / 2) * arrowSize, (direction.z + horizontal.z / 2) * arrowSize)),
+        startVec.clone().add(new THREE.Vector3((direction.x - horizontal.x / 2) * arrowSize, (direction.y - horizontal.y / 2) * arrowSize, (direction.z - horizontal.z / 2) * arrowSize)),
+        startVec,
+    ], [startVec, endVec, direction, horizontal, arrowSize]);
+    return <group ref={groupRef}>
+        {/* メインの線や */}
+        <Line
+            points={props.both ? arrow : arrow.slice(0,5)}
+            color="black"
+            lineWidth={1}
+        />
+    </group>
+}
 
+const PointAnnotationRenderer = (props: { annotation: PointAnnotation }) => {
+    // ラベルのオフセットで引き出し線を可視化するんやで
+    // 実際のCADアプリやったら、これは視点に依存するか手動で配置されるかもしれんな。
+    // ここではシンプルにするために固定の垂直オフセットを使うで。
+    const offsetHeight = 100;
+    const endVec = useMemo(() => new THREE.Vector3(...props.annotation.position), [props.annotation.position]);
+    const startVec = useMemo(() => endVec.clone().add(new THREE.Vector3(0, offsetHeight, 0)), [endVec]);
     return (
-        <group>
-            {/* メインの線や */}
-            <Line
-                points={arrow}
-                color="black"
-                lineWidth={1}
-            />
+        <>
+            <Arrow start={startVec.toArray() as [number, number, number]} end={endVec.toArray() as [number, number, number]} both={false} />
+            <Label position={startVec.toArray() as [number, number, number]} text={props.annotation.label} style={labelStyle} />
+        </>
+    );
+};
 
-            {/* 端点のマーカー（垂直な短い線）や */}
-            {/* 線に対して垂直な短い線を引くのは、基準となる上方向ベクトルがないと難しいんや。
-                とりあえず今は短い線はスキップして、矢印かドットを使うことにするで。
-                端点に小さな球を置くことにしよか。
-            */}
-            <mesh position={start}>
-                <sphereGeometry args={[1]} />
-                <meshBasicMaterial color="black" />
-            </mesh>
-            <mesh position={end}>
-                <sphereGeometry args={[1]} />
-                <meshBasicMaterial color="black" />
-            </mesh>
-
-            <Label position={midPoint.toArray() as [number, number, number]} text={label} style={labelStyle} />
-        </group>
+const DistanceAnnotationRenderer = ({ annotation }: { annotation: DistanceAnnotation }) => {
+    const startVec = useMemo(() => new THREE.Vector3(...annotation.start), [annotation.start]);
+    const endVec = useMemo(() => new THREE.Vector3(...annotation.end), [annotation.end]);
+    const center = useMemo(() => startVec.clone().add(endVec).multiplyScalar(0.5), [startVec, endVec]);
+    return (
+        <>
+            <Arrow start={startVec.toArray() as [number, number, number]} end={endVec.toArray() as [number, number, number]} both={true} />
+            <Label position={center.toArray() as [number, number, number]} text={annotation.label} style={labelStyle} />
+        </>
     );
 };
 
