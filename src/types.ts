@@ -20,6 +20,7 @@ export interface DistanceAnnotation {
 	start: [number, number, number];
 	end: [number, number, number];
 	label: string;
+	unit?: string;
 }
 
 export type Annotation = PointAnnotation | DistanceAnnotation;

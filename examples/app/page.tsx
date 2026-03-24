@@ -28,7 +28,8 @@ export default function Home() {
 			type: 'distance',
 			start: [-152, -87, -62],
 			end: [152, -87, -62],
-			label: '304mm',
+			label: 'Length',
+			unit: 'mm',
 		},
 	], []);
 
