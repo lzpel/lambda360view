@@ -9,6 +9,7 @@ import Annotations from './Annotations';
 import { ViewMenu, ViewType } from './ViewMenu';
 import { Grid } from './Grid';
 import { OrbitSizeControls } from './OrbitSizeControls';
+import Axes from './Axes';
 
 /** モデルの上方向軸からThree.jsのY-upに変換する回転を取得する */
 function getUpAxisRotation(axisUp: Axis): THREE.Euler {
@@ -239,7 +240,7 @@ function SceneManager({
 					{annotations && <Annotations annotations={annotations} />}
 				</group>
 				{showAxis && (
-					<axesHelper args={[maxSize * 0.75]} />
+					<Axes maxSize={maxSize} />
 				)}
 				{showGrid && (
 					<Grid maxSize={maxSize} />
