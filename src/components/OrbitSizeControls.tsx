@@ -24,7 +24,7 @@ interface OrbitSizeControlsProps {
  * - viewRequest変化時: 指定ビューにカメラを移動
  */
 export function OrbitSizeControls({ maxSize, orthographic, viewRequest }: OrbitSizeControlsProps) {
-	const { camera } = useThree();
+	const { camera, size } = useThree();
 	const controls = useThree(state => state.controls);
 	const prevCameraRef = useRef<THREE.Camera | null>(null);
 
@@ -35,10 +35,14 @@ export function OrbitSizeControls({ maxSize, orthographic, viewRequest }: OrbitS
 			prevCameraRef.current = camera;
 			if (isNewCamera) {
 				camera.position.set(distance, distance * 0.5, distance);
-				if (orthographic) (camera as THREE.OrthographicCamera).zoom = 2;
+				// r3fのデフォルトでleft=-width/2,right=width/2,top=height/2,bottom=-height/2（ワールド単位=px）に設定される。
+			// left/rightはwidth、top/bottomはheightに比例するのでアスペクト比（width/height）が自動で保たれる。
+			// zoom倍率をZにすると実際に見える縦方向のワールド単位数 = height / Z になる。
+			// モデル全体（maxSize）を画面に収めるには Z = height / maxSize が必要。
+			// 0.75は余白を持たせるための係数（モデルが画面の75%の高さに収まる）。
+			if (orthographic) (camera as THREE.OrthographicCamera).zoom = size.height / maxSize * 0.75;
 			} else {
-				const len =
-					camera.position.length();
+				const len = camera.position.length();
 				if (len > 0) camera.position.multiplyScalar(distance / len);
 			}
 
