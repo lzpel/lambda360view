@@ -27,8 +27,8 @@ export type Annotation = PointAnnotation | DistanceAnnotation;
 
 /** Props for Lambda360View component */
 export interface Lambda360ViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
-	/** GLB binary data (ArrayBuffer) to load directly, or null for empty state */
-	model: ArrayBuffer | null;
+	/** GLB binary data (ArrayBuffer) array to load directly; pass an empty array for empty state */
+	model: ArrayBuffer[];
 	/** React node to display in the center (e.g. loading spinner, error message) */
 	nodeCenter?: React.ReactNode;
 	/** Footer content to display at the bottom of the viewer */

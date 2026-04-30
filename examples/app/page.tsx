@@ -5,7 +5,7 @@ import Lambda360View from '@main/index';
 import type { Annotation } from '@main/types';
 
 export default function Home() {
-	const [model, setModel] = useState<ArrayBuffer | null>(null);
+	const [model, setModel] = useState<ArrayBuffer[]>([]);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -14,7 +14,7 @@ export default function Home() {
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				return res.arrayBuffer();
 			})
-			.then((buffer) => setModel(buffer))
+			.then((buffer) => setModel([buffer]))
 			.catch((e) => setError(`Failed to load model: ${e}`));
 	}, []);
 
@@ -49,7 +49,7 @@ export default function Home() {
 		);
 	}
 
-	if (!model) {
+	if (model.length === 0) {
 		return (
 			<main style={{
 				width: '100vw',

@@ -92,8 +92,13 @@ function GlbScene({
 	return <primitive object={scene} />;
 }
 
+interface LoadedItem {
+	scene: THREE.Group;
+	edgePositions: Float32Array | null;
+}
+
 interface SceneManagerProps {
-	model: ArrayBuffer | null;
+	model: ArrayBuffer[];
 	edgeColor: string;
 	showEdges: boolean;
 	axisUp: Axis;
@@ -119,60 +124,59 @@ function SceneManager({
 	viewRequest,
 	orthographic,
 }: SceneManagerProps) {
-	const [displayScene, setDisplayScene] = useState<THREE.Group | null>(null);
-	const [displayEdgePositions, setDisplayEdgePositions] = useState<Float32Array | null>(null);
-
-	const prevSceneRef = useRef<THREE.Group | null>(null);
+	const [items, setItems] = useState<LoadedItem[]>([]);
+	const prevItemsRef = useRef<LoadedItem[]>([]);
 
 	// モデル読み込みとシームレス切り替え
 	useEffect(() => {
 		let cancelled = false;
 
-		if (model === null) {
-			if (prevSceneRef.current) {
-				disposeScene(prevSceneRef.current);
-				prevSceneRef.current = null;
-			}
-			setDisplayScene(null);
-			setDisplayEdgePositions(null);
+		if (!model || model.length === 0) {
+			for (const item of prevItemsRef.current) disposeScene(item.scene);
+			prevItemsRef.current = [];
+			setItems([]);
 			return;
 		}
 
 		const loader = new GLTFLoader();
 
-		loader.parse(
-			model,
-			'',
-			(gltf) => {
-				if (cancelled) return;
-
-				const newScene = gltf.scene;
-				const edgeAccessorIndex = gltf.userData?.edgeAccessor;
-
-				const finalize = (edges: Float32Array | null) => {
-					if (cancelled) return;
-
-					if (prevSceneRef.current) {
-						disposeScene(prevSceneRef.current);
-					}
-
-					prevSceneRef.current = newScene;
-					setDisplayScene(newScene);
-					setDisplayEdgePositions(edges);
-				};
-
-				if (edgeAccessorIndex !== undefined) {
-					gltf.parser.getDependency('accessor', edgeAccessorIndex).then((attr: THREE.BufferAttribute) => {
-						finalize(attr.array as Float32Array);
-					});
-				} else {
-					finalize(null);
+		Promise.all(
+			model.map(
+				(buf) =>
+					new Promise<LoadedItem>((resolve, reject) => {
+						loader.parse(
+							buf,
+							'',
+							(gltf) => {
+								const edgeAccessorIndex = gltf.userData?.edgeAccessor;
+								if (edgeAccessorIndex !== undefined) {
+									gltf.parser
+										.getDependency('accessor', edgeAccessorIndex)
+										.then((attr: THREE.BufferAttribute) => {
+											resolve({ scene: gltf.scene, edgePositions: attr.array as Float32Array });
+										})
+										.catch(reject);
+								} else {
+									resolve({ scene: gltf.scene, edgePositions: null });
+								}
+							},
+							reject
+						);
+					})
+			)
+		)
+			.then((loaded) => {
+				if (cancelled) {
+					for (const item of loaded) disposeScene(item.scene);
+					return;
 				}
-			},
-			(error) => {
+				for (const item of prevItemsRef.current) disposeScene(item.scene);
+				prevItemsRef.current = loaded;
+				setItems(loaded);
+			})
+			.catch((error) => {
 				console.error('GLB parse error:', error);
-			}
-		);
+			});
 
 		return () => {
 			cancelled = true;
@@ -183,25 +187,31 @@ function SceneManager({
 	// アンマウント時のお片付け
 	useEffect(() => {
 		return () => {
-			if (prevSceneRef.current) {
-				disposeScene(prevSceneRef.current);
-				prevSceneRef.current = null;
-			}
+			for (const item of prevItemsRef.current) disposeScene(item.scene);
+			prevItemsRef.current = [];
 		};
 	}, []);
 
+	const unionBox = useMemo(() => {
+		if (items.length === 0) return null;
+		const box = new THREE.Box3();
+		for (const item of items) {
+			item.scene.updateMatrixWorld(true);
+			box.expandByObject(item.scene);
+		}
+		return box.isEmpty() ? null : box;
+	}, [items]);
+
 	const maxSize = useMemo(() => {
-		if (!displayScene) return null;
-		const box = new THREE.Box3().setFromObject(displayScene);
-		const size = box.getSize(new THREE.Vector3());
+		if (!unionBox) return null;
+		const size = unionBox.getSize(new THREE.Vector3());
 		return Math.max(size.x, size.y, size.z);
-	}, [displayScene]);
+	}, [unionBox]);
 
 	// axisGround / axisCenter によるモデルオフセットをモデル空間で計算する
 	const modelOffset = useMemo((): [number, number, number] => {
-		if (!displayScene || (!axisGround && !axisCenter?.length)) return [0, 0, 0];
-		const box = new THREE.Box3().setFromObject(displayScene);
-		const center = box.getCenter(new THREE.Vector3());
+		if (!unionBox || (!axisGround && !axisCenter?.length)) return [0, 0, 0];
+		const center = unionBox.getCenter(new THREE.Vector3());
 		let ox = 0, oy = 0, oz = 0;
 
 		if (axisCenter) {
@@ -210,16 +220,16 @@ function SceneManager({
 			if (axisCenter.includes('Z')) oz = -center.z;
 		}
 
-		if (axisGround === 'X') ox = -box.min.x;
-		if (axisGround === 'Y') oy = -box.min.y;
-		if (axisGround === 'Z') oz = -box.min.z;
+		if (axisGround === 'X') ox = -unionBox.min.x;
+		if (axisGround === 'Y') oy = -unionBox.min.y;
+		if (axisGround === 'Z') oz = -unionBox.min.z;
 
 		return [ox, oy, oz];
-	}, [displayScene, axisGround, axisCenter]);
+	}, [unionBox, axisGround, axisCenter]);
 
 	const upAxisRotation = useMemo(() => getUpAxisRotation(axisUp), [axisUp]);
 
-	if (!displayScene || !maxSize) return null;
+	if (items.length === 0 || !maxSize) return null;
 
 	return (
 		<>
@@ -231,12 +241,15 @@ function SceneManager({
 
 			<group rotation={upAxisRotation}>
 				<group position={modelOffset}>
-					<GlbScene
-						scene={displayScene}
-						edgeColor={edgeColor}
-						showEdges={showEdges}
-						edgePositions={displayEdgePositions}
-					/>
+					{items.map((item, i) => (
+						<GlbScene
+							key={i}
+							scene={item.scene}
+							edgeColor={edgeColor}
+							showEdges={showEdges}
+							edgePositions={item.edgePositions}
+						/>
+					))}
 					{annotations && <Annotations annotations={annotations} />}
 				</group>
 				{showAxis && (
