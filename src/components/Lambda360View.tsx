@@ -40,11 +40,13 @@ function GlbScene({
 	edgeColor,
 	showEdges,
 	edgePositions,
+	clipPlane,
 }: {
 	scene: THREE.Group;
 	edgeColor: string;
 	showEdges: boolean;
 	edgePositions: Float32Array | null;
+	clipPlane: THREE.Plane;
 }) {
 	const edgeLineRef = useRef<THREE.LineSegments | null>(null);
 
@@ -52,7 +54,11 @@ function GlbScene({
 		if (!edgePositions) return;
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(edgePositions, 3));
-		const material = new THREE.LineBasicMaterial({ color: edgeColor, linewidth: 1 });
+		const material = new THREE.LineBasicMaterial({
+			color: edgeColor,
+			linewidth: 1,
+			clippingPlanes: [clipPlane],
+		});
 		const lineSegments = new THREE.LineSegments(geometry, material);
 		lineSegments.userData._isEdge = true;
 		scene.add(lineSegments);
@@ -64,7 +70,7 @@ function GlbScene({
 			material.dispose();
 			edgeLineRef.current = null;
 		};
-	}, [scene, edgePositions]);
+	}, [scene, edgePositions, clipPlane]);
 
 	useEffect(() => {
 		if (edgeLineRef.current) {
@@ -85,9 +91,11 @@ function GlbScene({
 				mat.polygonOffset = true;
 				mat.polygonOffsetFactor = 1;
 				mat.polygonOffsetUnits = 1;
+				mat.clippingPlanes = [clipPlane];
+				mat.clipShadows = true;
 			}
 		});
-	}, [scene]);
+	}, [scene, clipPlane]);
 
 	return <primitive object={scene} />;
 }
@@ -109,6 +117,8 @@ interface SceneManagerProps {
 	showGrid: boolean;
 	viewRequest: { type: ViewType; ts: number } | null;
 	orthographic: boolean;
+	clipNear: number;
+	clipPlane: THREE.Plane;
 }
 
 function SceneManager({
@@ -123,6 +133,8 @@ function SceneManager({
 	showGrid,
 	viewRequest,
 	orthographic,
+	clipNear,
+	clipPlane,
 }: SceneManagerProps) {
 	const [items, setItems] = useState<LoadedItem[]>([]);
 	const prevItemsRef = useRef<LoadedItem[]>([]);
@@ -233,7 +245,7 @@ function SceneManager({
 
 	return (
 		<>
-			<OrbitSizeControls maxSize={maxSize} orthographic={orthographic} viewRequest={viewRequest} />
+			<OrbitSizeControls maxSize={maxSize} orthographic={orthographic} viewRequest={viewRequest} clipNear={clipNear} clipPlane={clipPlane} />
 
 			<ambientLight intensity={0.6} />
 			<directionalLight position={[10, 10, 5]} intensity={0.8} />
@@ -248,6 +260,7 @@ function SceneManager({
 							edgeColor={edgeColor}
 							showEdges={showEdges}
 							edgePositions={item.edgePositions}
+							clipPlane={clipPlane}
 						/>
 					))}
 					{annotations && <Annotations annotations={annotations} />}
@@ -289,6 +302,9 @@ export default function Lambda360View({
 	const [showAxis, setShowAxis] = useState(true);
 	const [showGrid, setShowGrid] = useState(false);
 	const [viewRequest, setViewRequest] = useState<{ type: ViewType; ts: number } | null>(null);
+	const [clipNear, setClipNear] = useState(0);
+	// model 用クリッピング平面。OrbitSizeControls の useFrame で毎フレーム更新する。
+	const clipPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, -1), 0), []);
 
 	const handleViewChange = (view: ViewType) => {
 		setViewRequest({ type: view, ts: Date.now() });
@@ -330,6 +346,8 @@ export default function Lambda360View({
 					showGrid={showGrid}
 					onToggleGrid={() => setShowGrid(!showGrid)}
 					onDownloadStep={onDownloadStep}
+					clipNear={clipNear}
+					onClipNearChange={setClipNear}
 				/>
 			)}
 			{/* Canvas */}
@@ -338,6 +356,7 @@ export default function Lambda360View({
 					antialias: true,
 					toneMapping: THREE.NoToneMapping,
 				}}
+				onCreated={({ gl }) => { gl.localClippingEnabled = true; }}
 				style={{ background: backgroundColor }}
 			>
 				<SceneManager
@@ -352,6 +371,8 @@ export default function Lambda360View({
 					showGrid={showGrid}
 					viewRequest={viewRequest}
 					orthographic={orthographic}
+					clipNear={clipNear}
+					clipPlane={clipPlane}
 				/>
 			</Canvas>
 			{/* nodeFooter */}

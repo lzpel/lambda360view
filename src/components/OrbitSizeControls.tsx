@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useEffect, useRef, useMemo } from 'react';
+import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, OrthographicCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ViewType } from './ViewMenu';
@@ -10,6 +10,8 @@ interface OrbitSizeControlsProps {
 	maxSize: number;
 	orthographic: boolean;
 	viewRequest: { type: ViewType; ts: number } | null;
+	clipNear: number;
+	clipPlane: THREE.Plane;
 }
 
 /**
@@ -23,7 +25,7 @@ interface OrbitSizeControlsProps {
  * - maxSize変化時（モデルスワップ）: カメラ方向を保ったまま距離をスケール
  * - viewRequest変化時: 指定ビューにカメラを移動
  */
-export function OrbitSizeControls({ maxSize, orthographic, viewRequest }: OrbitSizeControlsProps) {
+export function OrbitSizeControls({ maxSize, orthographic, viewRequest, clipNear, clipPlane }: OrbitSizeControlsProps) {
 	const { camera, size } = useThree();
 	const controls = useThree(state => state.controls);
 	const prevCameraRef = useRef<THREE.Camera | null>(null);
@@ -71,6 +73,23 @@ export function OrbitSizeControls({ maxSize, orthographic, viewRequest }: OrbitS
 		};
 
 	}, [viewRequest, maxSize, controls, camera]);
+
+	// clipNear: 0=全体表示 / 0.5=中央断面 / 1=完全クリップ。
+	// カメラからターゲット方向を法線とする平面を、カメラから clipDist の位置に置く。
+	// material.clippingPlanes で参照されるので、Grid/Annotation/Axes は影響を受けず model のみがクリップされる。
+	// 1.5倍はバウンディングボックス対角（最大 √3/2*maxSize ≒ 0.87*maxSize）を確実にカバーするマージン。
+	const tmpNormal = useMemo(() => new THREE.Vector3(), []);
+	const tmpCoplanar = useMemo(() => new THREE.Vector3(), []);
+	useFrame(() => {
+		if (!controls) return;
+		const target = (controls as unknown as { target: THREE.Vector3 }).target;
+		const D = camera.position.distanceTo(target);
+		const clipDist = D + (clipNear * 2 - 1) * maxSize * 1.5;
+
+		tmpNormal.subVectors(target, camera.position).normalize();
+		tmpCoplanar.copy(camera.position).addScaledVector(tmpNormal, clipDist);
+		clipPlane.setFromNormalAndCoplanarPoint(tmpNormal, tmpCoplanar);
+	});
 
 	return (
 		<>
