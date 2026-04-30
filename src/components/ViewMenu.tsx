@@ -23,6 +23,8 @@ interface ViewMenuProps {
 	showGridButton?: boolean;
 	showGrid?: boolean;
 	onDownloadStep?: () => void;
+	clipNear?: number;
+	onClipNearChange?: (value: number) => void;
 }
 
 export function ViewMenu({
@@ -34,6 +36,8 @@ export function ViewMenu({
 	showGridButton = true,
 	showGrid = true,
 	onDownloadStep,
+	clipNear,
+	onClipNearChange,
 }: ViewMenuProps) {
 	const buttonStyle: React.CSSProperties = {
 		display: 'flex',
@@ -135,6 +139,36 @@ export function ViewMenu({
 					{icon}
 				</button>
 			))}
+
+			{/* 断面スライダー */}
+			{onClipNearChange && (
+				<>
+					<Separator />
+					<label
+						title="Slice"
+						style={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: 6,
+							fontSize: 12,
+							fontFamily: 'sans-serif',
+							color: '#444',
+							paddingInline: 4,
+						}}
+					>
+						Slice
+						<input
+							type="range"
+							min={0}
+							max={1}
+							step={0.01}
+							value={clipNear ?? 0}
+							onChange={(e) => onClipNearChange(parseFloat(e.target.value))}
+							style={{ width: 80 }}
+						/>
+					</label>
+				</>
+			)}
 
 			{/* STEPダウンロード */}
 			{onDownloadStep && (
